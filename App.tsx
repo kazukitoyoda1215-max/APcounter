@@ -5,7 +5,6 @@ import CopySection from './components/CopySection';
 import SummarySection from './components/SummarySection';
 import IndependentCounterSection from './components/IndependentCounterSection';
 import ProgressTrackerSection from './components/ProgressTrackerSection';
-import DataManagementSection from './components/DataManagementSection';
 import type { CounterState, CounterCategory, IndependentCounterCategory } from './types';
 
 // --- Helper Functions ---
@@ -21,6 +20,106 @@ const SETTINGS_STORAGE_KEY = 'ap_day_v3_settings_v3';
 
 const initialState: CounterState = { okMain: 0, okElectricity: 0, ng: 0, ps: 0, na: 0, ex: 0, callsMade: 0, callsReceived: 0 };
 
+// --- API Helper ---
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzxi7ldoGPbAjVH7VIeh3BOH-V56m3Rg1y2YpRlcFqm3WaWNehR61lW8xoRQaCbCaBdqw/exec";
+
+async function api<T = any>(
+  action: string,
+  payload: Record<string, any>,
+  timeoutMs = 10000
+): Promise<{ ok: boolean; data?: T; token?: string; error?: { code: number; message: string; }; }> {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+            body: JSON.stringify({ action, ...payload }),
+            signal: controller.signal
+        });
+        clearTimeout(id);
+
+        let responseData: any;
+        try {
+            responseData = await response.json();
+        } catch {
+            return { ok: false, error: { code: 0, message: 'Invalid JSON from server' } };
+        }
+        
+        return responseData;
+
+    } catch (err: any) {
+        clearTimeout(id);
+        const message = err?.name === 'AbortError' ? 'Timeout' : String(err);
+        return { ok: false, error: { code: -1, message } };
+    }
+}
+
+
+// --- Auth Section Component ---
+interface AuthSectionProps {
+    isLoggedIn: boolean;
+    currentName: string;
+    name: string;
+    onNameChange: (value: string) => void;
+    password: any;
+    onPasswordChange: (value: string) => void;
+    message: string;
+    isRegisterPrompt: boolean;
+    onLogin: () => void;
+    onRegister: () => void;
+    onLogout: () => void;
+    onSave: () => void;
+    onLoad: () => void;
+}
+
+const AuthSection: React.FC<AuthSectionProps> = ({
+    isLoggedIn, currentName, name, onNameChange, password, onPasswordChange,
+    message, isRegisterPrompt, onLogin, onRegister, onLogout, onSave, onLoad
+}) => {
+    return (
+        <section className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
+            <h2 className="text-lg font-semibold text-slate-800">アカウント &amp; データ同期</h2>
+            
+            {!isLoggedIn ? (
+                <div className="space-y-3">
+                    <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-slate-600 mb-1">ユーザー</label>
+                            <input type="text" id="name" value={name} onChange={e => onNameChange(e.target.value)} className="w-full border rounded-md p-2 focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div>
+                            <label htmlFor="pw" className="block text-sm font-medium text-slate-600 mb-1">パスワード</label>
+                            <input type="password" id="pw" value={password} onChange={e => onPasswordChange(e.target.value)} className="w-full border rounded-md p-2 focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <button onClick={onLogin} className="px-4 py-2 rounded-md bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">ログイン</button>
+                        {isRegisterPrompt && (
+                             <button onClick={onRegister} className="px-4 py-2 rounded-md bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">はい、登録します</button>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    <p className="text-slate-700">ようこそ、<span className="font-bold">{currentName}</span>さん</p>
+                     <div className="flex items-center gap-3 flex-wrap">
+                        <button onClick={onSave} className="px-4 py-2 rounded-md bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">データをクラウドに保存</button>
+                        <button onClick={onLoad} className="px-4 py-2 rounded-md bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">データをクラウドから復元</button>
+                        <button onClick={onLogout} className="px-4 py-2 rounded-md bg-slate-500 text-white font-semibold hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400">ログアウト</button>
+                    </div>
+                </div>
+            )}
+            
+            {message && (
+                <div className="text-sm text-slate-600 pt-2 border-t mt-3">{message}</div>
+            )}
+        </section>
+    );
+};
+
+
 // --- Main App Component ---
 const App: React.FC = () => {
   const [counts, setCounts] = useState<CounterState>(initialState);
@@ -29,6 +128,15 @@ const App: React.FC = () => {
   const [goals, setGoals] = useState<{ main: number; electricity: number }>({ main: 0, electricity: 0 });
   const [remainingWorkdays, setRemainingWorkdays] = useState<number>(1);
   const [okAdjustments, setOkAdjustments] = useState<{ main: number; electricity: number }>({ main: 0, electricity: 0 });
+
+  // Auth state
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [currentName, setCurrentName] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authMessage, setAuthMessage] = useState('');
+  const [isRegisterPrompt, setIsRegisterPrompt] = useState(false);
+  const [lastTried, setLastTried] = useState<{name: string, password: string} | null>(null);
 
 
   // Effect for loading data and checking for date changes
@@ -118,6 +226,18 @@ const App: React.FC = () => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsToSave));
   }, [goals, remainingWorkdays, okAdjustments, currentDate]);
 
+  // Effect for auth check on boot
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedName = localStorage.getItem('ap_day_v3_username');
+    if (token && storedName) {
+        setIsLoggedIn(true);
+        setCurrentName(storedName);
+        setName(storedName);
+        setAuthMessage(`おかえりなさい、${storedName}さん`);
+    }
+  }, []);
+
   // Calculate total OKs for the current month
   const totalMonthOks = useMemo(() => {
     const ymd = ymdLocal(currentDate);
@@ -160,6 +280,118 @@ const App: React.FC = () => {
     return `${d}　OK(主) ${counts.okMain}件 / OK(電) ${counts.okElectricity}件 / NG ${counts.ng}件 / 見込み ${counts.ps}件 / 留守 ${counts.na}件 / 取次対象外 ${counts.ex}件 / コール ${counts.callsMade}件 / 入電 ${counts.callsReceived}件（合計 ${summary.total}件・成約率(主) ${summary.rateMain.toFixed(1)}% / 成約率(電) ${summary.rateElectricity.toFixed(1)}%）`;
   }, [counts, currentDate, summary]);
 
+  // --- Auth Logic Callbacks ---
+  const showAuthMessage = (msg: string, isPrompt = false) => {
+    setAuthMessage(msg);
+    setIsRegisterPrompt(isPrompt);
+  };
+
+  const loginFlow = useCallback(async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName || !password) {
+        return showAuthMessage('ユーザーとパスワードを入力してください');
+    }
+    showAuthMessage('ログイン中…');
+    setLastTried({ name: trimmedName, password });
+
+    const r = await api('/auth/login', { name: trimmedName, password });
+
+    if (r.ok && r.token) {
+        localStorage.setItem('token', r.token);
+        localStorage.setItem('ap_day_v3_username', trimmedName);
+        setCurrentName(trimmedName);
+        setIsLoggedIn(true);
+        showAuthMessage('ログイン成功！');
+    } else {
+        if (r.error?.code === 404) {
+            showAuthMessage('このユーザーが見つかりません。新規登録しますか？', true);
+        } else if (r.error?.code === 401) {
+            showAuthMessage('パスワードが違います。');
+        } else {
+            showAuthMessage('エラー: ' + (r.error?.message || '不明なエラー'));
+        }
+    }
+  }, [name, password]);
+
+  const registerFlow = useCallback(async () => {
+    if (!lastTried) return;
+    const { name: lastName, password: lastPassword } = lastTried;
+    showAuthMessage('登録中…');
+    const r = await api('/auth/register', { name: lastName, password: lastPassword });
+    if (!r.ok) {
+        if (r.error?.code === 409) return showAuthMessage('すでに登録済みです。ログインしてください。');
+        return showAuthMessage('登録エラー: ' + (r.error?.message || '不明なエラー'));
+    }
+    await loginFlow();
+  }, [lastTried, loginFlow]);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('ap_day_v3_username');
+    setIsLoggedIn(false);
+    setCurrentName(null);
+    setName('');
+    setPassword('');
+    showAuthMessage('ログアウトしました');
+  }, []);
+
+  const saveDataToServer = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !currentName) return showAuthMessage('未ログイン');
+    
+    showAuthMessage('保存中...');
+    try {
+        const dataToSave: { [key: string]: string } = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('ap_day_v3_')) {
+                dataToSave[key] = localStorage.getItem(key) || '';
+            }
+        }
+        const r = await api('/data/set', { name: currentName, data: dataToSave, authorization: token });
+        if (r.ok) {
+            showAuthMessage('保存しました');
+        } else {
+            showAuthMessage('保存エラー: ' + (r.error?.message || '不明なエラー'));
+        }
+    } catch (e) {
+        showAuthMessage('保存中にエラーが発生しました。');
+    }
+  }, [currentName]);
+
+  const loadDataFromServer = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !currentName) return showAuthMessage('未ログイン');
+
+    if (!confirm('サーバーからデータをロードすると、現在のローカルデータは上書きされます。よろしいですか？')) return;
+
+    showAuthMessage('ロード中...');
+    const r = await api<{ [key: string]: string }>('/data/get', { name: currentName, authorization: token });
+    if (r.ok && r.data) {
+        const dataToImport = r.data;
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('ap_day_v3_')) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        for (const key in dataToImport) {
+            if (Object.prototype.hasOwnProperty.call(dataToImport, key) && key.startsWith('ap_day_v3_')) {
+                localStorage.setItem(key, dataToImport[key]);
+            }
+        }
+        alert('データのロードが完了しました。ページをリロードします。');
+        window.location.reload();
+    } else {
+        showAuthMessage('データ取得エラー: ' + (r.error?.message || '不明なエラー'));
+    }
+  }, [currentName]);
+
+
+  // --- Event Handlers ---
   const handleIncrement = useCallback((category: CounterCategory) => {
     setCounts(prevCounts => ({
       ...prevCounts,
@@ -226,6 +458,22 @@ const App: React.FC = () => {
         <p className="text-slate-600 mt-2">日々の活動を記録し、ワンクリックで報告テキストをコピーします。（当日データ自動保存）</p>
       </header>
 
+      <AuthSection
+        isLoggedIn={isLoggedIn}
+        currentName={currentName || ''}
+        name={name}
+        onNameChange={setName}
+        password={password}
+        onPasswordChange={setPassword}
+        message={authMessage}
+        isRegisterPrompt={isRegisterPrompt}
+        onLogin={loginFlow}
+        onRegister={registerFlow}
+        onLogout={logout}
+        onSave={saveDataToServer}
+        onLoad={loadDataFromServer}
+      />
+
       <main className="space-y-6">
         <CounterSection
           counts={counts}
@@ -257,7 +505,6 @@ const App: React.FC = () => {
           rateElectricity={summary.rateElectricity}
         />
         <CopySection textToCopy={previewText} />
-        <DataManagementSection />
       </main>
 
        <footer className="text-center text-sm text-slate-500 pt-6 border-t mt-6">

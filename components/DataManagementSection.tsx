@@ -113,7 +113,7 @@ const DataManagementSection: React.FC = () => {
 
     return (
         <section className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">データ管理</h2>
+            <h2 className="text-lg font-semibold text-slate-800">ローカルデータ管理</h2>
             <p className="text-sm text-slate-600">
                 現在のカウンターデータをファイルにエクスポート（バックアップ）したり、ファイルからインポート（復元）したりできます。
                 インポートを行うと現在のデータはすべて上書きされますのでご注意ください。

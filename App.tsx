@@ -5,6 +5,7 @@ import CopySection from './components/CopySection';
 import SummarySection from './components/SummarySection';
 import IndependentCounterSection from './components/IndependentCounterSection';
 import ProgressTrackerSection from './components/ProgressTrackerSection';
+import DataManagementSection from './components/DataManagementSection';
 import type { CounterState, CounterCategory, IndependentCounterCategory } from './types';
 
 // --- Helper Functions ---
@@ -16,7 +17,7 @@ const ymdLocal = (d: Date): string => {
 };
 
 const getStorageKey = (d: Date): string => `ap_day_v3_${ymdLocal(d)}`;
-const SETTINGS_STORAGE_KEY = 'ap_day_v3_settings_v2';
+const SETTINGS_STORAGE_KEY = 'ap_day_v3_settings_v3';
 
 const initialState: CounterState = { okMain: 0, okElectricity: 0, ng: 0, ps: 0, na: 0, ex: 0, callsMade: 0, callsReceived: 0 };
 
@@ -58,20 +59,30 @@ const App: React.FC = () => {
 
     loadStateForDate(currentDate);
 
-    // Load settings
+    // Load settings and reset if month has changed
     try {
         const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        const currentMonth = ymdLocal(currentDate).substring(0, 7);
+
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
-            setGoals({
-                main: parsed.goals?.main || 0,
-                electricity: parsed.goals?.electricity || 0,
-            });
-            setRemainingWorkdays(parsed.remainingWorkdays || 1);
-            setOkAdjustments(parsed.okAdjustments || { main: 0, electricity: 0 });
+            if (parsed.lastLoadedMonth === currentMonth) {
+              // Same month, load saved settings
+              setGoals({
+                  main: parsed.goals?.main || 0,
+                  electricity: parsed.goals?.electricity || 0,
+              });
+              setRemainingWorkdays(parsed.remainingWorkdays || 1);
+              setOkAdjustments(parsed.okAdjustments || { main: 0, electricity: 0 });
+            } else {
+              // New month, reset settings state to defaults
+              setGoals({ main: 0, electricity: 0 });
+              setRemainingWorkdays(1);
+              setOkAdjustments({ main: 0, electricity: 0 });
+            }
         }
     } catch {
-        // ignore errors
+        // ignore errors, initial state will be used
     }
 
 
@@ -97,9 +108,15 @@ const App: React.FC = () => {
 
   // Effect for saving settings
   useEffect(() => {
-    const settingsToSave = { goals, remainingWorkdays, okAdjustments };
+    const currentMonth = ymdLocal(currentDate).substring(0, 7);
+    const settingsToSave = { 
+        goals, 
+        remainingWorkdays, 
+        okAdjustments,
+        lastLoadedMonth: currentMonth
+    };
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsToSave));
-  }, [goals, remainingWorkdays, okAdjustments]);
+  }, [goals, remainingWorkdays, okAdjustments, currentDate]);
 
   // Calculate total OKs for the current month
   const totalMonthOks = useMemo(() => {
@@ -240,6 +257,7 @@ const App: React.FC = () => {
           rateElectricity={summary.rateElectricity}
         />
         <CopySection textToCopy={previewText} />
+        <DataManagementSection />
       </main>
 
        <footer className="text-center text-sm text-slate-500 pt-6 border-t mt-6">

@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Copy of React Minimal Counter & Copier",
+  "description": "A simple web application built with React and Tailwind CSS to count items in different categories and copy a formatted summary to the clipboard. This is a modernized version of a vanilla JavaScript app.",
+  "requestFramePermissions": []
+}

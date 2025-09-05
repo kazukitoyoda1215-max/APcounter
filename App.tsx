@@ -138,6 +138,34 @@ const App: React.FC = () => {
   const [isRegisterPrompt, setIsRegisterPrompt] = useState(false);
   const [lastTried, setLastTried] = useState<{name: string, password: string} | null>(null);
 
+  // Logic to handle automatic reset of monthly settings
+  const handleMonthChange = useCallback((date: Date) => {
+    const currentMonth = ymdLocal(date).substring(0, 7);
+    
+    try {
+      const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        // If the saved month is different from the current month, reset settings
+        if (parsed.lastLoadedMonth !== currentMonth) {
+          setGoals({ main: 0, electricity: 0 });
+          setRemainingWorkdays(1);
+          setOkAdjustments({ main: 0, electricity: 0 });
+        } else {
+          // Same month, load saved settings
+          setGoals({
+              main: parsed.goals?.main || 0,
+              electricity: parsed.goals?.electricity || 0,
+          });
+          setRemainingWorkdays(parsed.remainingWorkdays || 1);
+          setOkAdjustments(parsed.okAdjustments || { main: 0, electricity: 0 });
+        }
+      }
+    } catch {
+      // On error, do nothing; initial state will be used
+    }
+  }, []);
+
 
   // Effect for loading data and checking for date changes
   useEffect(() => {
@@ -167,32 +195,8 @@ const App: React.FC = () => {
 
     loadStateForDate(currentDate);
 
-    // Load settings and reset if month has changed
-    try {
-        const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
-        const currentMonth = ymdLocal(currentDate).substring(0, 7);
-
-        if (savedSettings) {
-            const parsed = JSON.parse(savedSettings);
-            if (parsed.lastLoadedMonth === currentMonth) {
-              // Same month, load saved settings
-              setGoals({
-                  main: parsed.goals?.main || 0,
-                  electricity: parsed.goals?.electricity || 0,
-              });
-              setRemainingWorkdays(parsed.remainingWorkdays || 1);
-              setOkAdjustments(parsed.okAdjustments || { main: 0, electricity: 0 });
-            } else {
-              // New month, reset settings state to defaults
-              setGoals({ main: 0, electricity: 0 });
-              setRemainingWorkdays(1);
-              setOkAdjustments({ main: 0, electricity: 0 });
-            }
-        }
-    } catch {
-        // ignore errors, initial state will be used
-    }
-
+    // Check if the month has changed and reset settings if necessary
+    handleMonthChange(currentDate);
 
     const intervalId = setInterval(() => {
       const today = new Date();
@@ -202,7 +206,7 @@ const App: React.FC = () => {
     }, 60000);
 
     return () => clearInterval(intervalId);
-  }, [currentDate]);
+  }, [currentDate, handleMonthChange]);
 
   // Effect for saving daily counts
   useEffect(() => {

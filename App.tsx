@@ -126,7 +126,8 @@ const App: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [lastSaveTime, setLastSaveTime] = useState<string>('');
   const [goals, setGoals] = useState<{ main: number; electricity: number }>({ main: 0, electricity: 0 });
-  const [remainingWorkdays, setRemainingWorkdays] = useState<number>(1);
+  const [totalWorkdays, setTotalWorkdays] = useState<number>(1);
+  const [completedWorkdays, setCompletedWorkdays] = useState<number>(0);
   const [okAdjustments, setOkAdjustments] = useState<{ main: number; electricity: number }>({ main: 0, electricity: 0 });
 
   // Auth state
@@ -149,7 +150,8 @@ const App: React.FC = () => {
         // If the saved month is different from the current month, reset settings
         if (parsed.lastLoadedMonth !== currentMonth) {
           setGoals({ main: 0, electricity: 0 });
-          setRemainingWorkdays(1);
+          setTotalWorkdays(1);
+          setCompletedWorkdays(0);
           setOkAdjustments({ main: 0, electricity: 0 });
         } else {
           // Same month, load saved settings
@@ -157,7 +159,8 @@ const App: React.FC = () => {
               main: parsed.goals?.main || 0,
               electricity: parsed.goals?.electricity || 0,
           });
-          setRemainingWorkdays(parsed.remainingWorkdays || 1);
+          setTotalWorkdays(parsed.totalWorkdays || 1);
+          setCompletedWorkdays(parsed.completedWorkdays || 0);
           setOkAdjustments(parsed.okAdjustments || { main: 0, electricity: 0 });
         }
       }
@@ -223,12 +226,13 @@ const App: React.FC = () => {
     const currentMonth = ymdLocal(currentDate).substring(0, 7);
     const settingsToSave = { 
         goals, 
-        remainingWorkdays, 
+        totalWorkdays,
+        completedWorkdays,
         okAdjustments,
         lastLoadedMonth: currentMonth
     };
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsToSave));
-  }, [goals, remainingWorkdays, okAdjustments, currentDate]);
+  }, [goals, totalWorkdays, completedWorkdays, okAdjustments, currentDate]);
 
   // Effect for auth check on boot
   useEffect(() => {
@@ -439,8 +443,12 @@ const App: React.FC = () => {
     }));
   }, []);
 
-  const handleDaysChange = useCallback((value: number) => {
-    setRemainingWorkdays(Math.max(1, value));
+  const handleTotalDaysChange = useCallback((value: number) => {
+    setTotalWorkdays(Math.max(1, value));
+  }, []);
+
+  const handleCompletedDaysChange = useCallback((value: number) => {
+    setCompletedWorkdays(Math.max(0, value));
   }, []);
   
   const handleAdjustmentChange = useCallback((category: 'main' | 'electricity', value: number) => {
@@ -495,10 +503,12 @@ const App: React.FC = () => {
         />
         <ProgressTrackerSection
           goals={goals}
-          remainingWorkdays={remainingWorkdays}
+          totalWorkdays={totalWorkdays}
+          completedWorkdays={completedWorkdays}
           totalMonthOks={totalMonthOks}
           onGoalChange={handleGoalChange}
-          onDaysChange={handleDaysChange}
+          onTotalDaysChange={handleTotalDaysChange}
+          onCompletedDaysChange={handleCompletedDaysChange}
           okAdjustments={okAdjustments}
           onAdjustmentChange={handleAdjustmentChange}
         />

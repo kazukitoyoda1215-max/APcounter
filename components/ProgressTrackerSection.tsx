@@ -6,7 +6,8 @@ interface ProgressTrackerSectionProps {
     main: number;
     electricity: number;
   };
-  remainingWorkdays: number;
+  totalWorkdays: number;
+  completedWorkdays: number;
   totalMonthOks: {
     main: number;
     electricity: number;
@@ -16,7 +17,8 @@ interface ProgressTrackerSectionProps {
     electricity: number;
   };
   onGoalChange: (category: 'main' | 'electricity', value: number) => void;
-  onDaysChange: (value: number) => void;
+  onTotalDaysChange: (value: number) => void;
+  onCompletedDaysChange: (value: number) => void;
   onAdjustmentChange: (category: 'main' | 'electricity', value: number) => void;
 }
 
@@ -24,26 +26,52 @@ interface TrackerDisplayProps {
   title: string;
   goal: number;
   totalOks: number;
-  remainingWorkdays: number;
+  totalWorkdays: number;
+  completedWorkdays: number;
 }
 
-const TrackerDisplay: React.FC<TrackerDisplayProps> = ({ title, goal, totalOks, remainingWorkdays }) => {
+const TrackerDisplay: React.FC<TrackerDisplayProps> = ({ title, goal, totalOks, totalWorkdays, completedWorkdays }) => {
   const progress = useMemo(() => {
     if (!goal || goal <= 0) return 0;
     return (totalOks / goal) * 100;
   }, [totalOks, goal]);
 
+  const remainingWorkdays = useMemo(() => {
+    return Math.max(1, totalWorkdays - completedWorkdays);
+  }, [totalWorkdays, completedWorkdays]);
+
   const dailyTarget = useMemo(() => {
-    if (!remainingWorkdays || remainingWorkdays <= 0) return 0;
     const remainingOks = goal - totalOks;
     if (remainingOks <= 0) return 0; // Goal reached
     return Math.ceil(remainingOks / remainingWorkdays);
   }, [goal, totalOks, remainingWorkdays]);
 
+  const progressPace = useMemo(() => {
+    if (goal <= 0 || totalWorkdays <= 0 || completedWorkdays <= 0) {
+      return { percent: 0, color: 'text-slate-600' };
+    }
+    const idealPaceTotal = (goal / totalWorkdays) * completedWorkdays;
+    if (idealPaceTotal <= 0) {
+        return { percent: totalOks > 0 ? 999 : 100, color: 'text-green-600' };
+    }
+    const percent = (totalOks / idealPaceTotal) * 100;
+    
+    let color = 'text-green-600';
+    if (percent < 90) {
+        color = 'text-red-600';
+    } else if (percent < 100) {
+        color = 'text-orange-500';
+    }
+
+    return { percent, color };
+
+  }, [goal, totalOks, totalWorkdays, completedWorkdays]);
+
+
   return (
     <div className="space-y-3 p-4 border rounded-lg bg-slate-50">
       <h3 className="font-semibold text-slate-700">{title}</h3>
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-3 gap-3">
         <div className="rounded-xl border bg-white p-3">
           <div className="flex items-center gap-1.5">
             <div className="text-sm text-slate-500">今月の進捗</div>
@@ -61,8 +89,15 @@ const TrackerDisplay: React.FC<TrackerDisplayProps> = ({ title, goal, totalOks, 
             <span className="text-sm font-normal text-slate-600 ml-2">({totalOks} / {goal || '?'})</span>
           </div>
         </div>
+         <div className="rounded-xl border bg-white p-3">
+          <div className="text-sm text-slate-500">進捗達成率</div>
+          <div className={`text-lg font-semibold ${progressPace.color}`}>
+            {progressPace.percent.toFixed(1)}%
+            <span className="text-sm font-normal text-slate-600 ml-2">(100%で目標ペース)</span>
+          </div>
+        </div>
         <div className="rounded-xl border bg-white p-3">
-          <div className="text-sm text-slate-500">今日の必要件数</div>
+          <div className="text-sm text-slate-500">残りの必要件数</div>
           <div className="text-lg font-semibold text-red-600">
             {dailyTarget}件
             <span className="text-sm font-normal text-slate-600 ml-2">(1日あたり)</span>
@@ -76,31 +111,47 @@ const TrackerDisplay: React.FC<TrackerDisplayProps> = ({ title, goal, totalOks, 
 
 const ProgressTrackerSection: React.FC<ProgressTrackerSectionProps> = ({
   goals,
-  remainingWorkdays,
+  totalWorkdays,
+  completedWorkdays,
   totalMonthOks,
   okAdjustments,
   onGoalChange,
-  onDaysChange,
+  onTotalDaysChange,
+  onCompletedDaysChange,
   onAdjustmentChange,
 }) => {
   return (
     <section className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
-      <h2 className="text-lg font-semibold text-slate-800">進捗トラッカー</h2>
+      <h2 className="text-lg font-semibold text-slate-800">進捗トラッカー (月次)</h2>
       
       {/* Input Fields */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="md:col-span-1">
-          <label htmlFor="remaining-days" className="block text-sm font-medium text-slate-600 mb-1">
-            月の残出勤日数 (共通)
+      <div className="grid md:grid-cols-4 gap-4">
+        <div>
+          <label htmlFor="total-days" className="block text-sm font-medium text-slate-600 mb-1">
+            月の総出勤日数
           </label>
           <input
             type="number"
-            id="remaining-days"
-            value={remainingWorkdays || ''}
-            onChange={(e) => onDaysChange(parseInt(e.target.value, 10) || 1)}
+            id="total-days"
+            value={totalWorkdays || ''}
+            onChange={(e) => onTotalDaysChange(parseInt(e.target.value, 10) || 1)}
             className="w-full border rounded-md p-2 text-lg font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder="e.g., 20"
             min="1"
+          />
+        </div>
+         <div>
+          <label htmlFor="completed-days" className="block text-sm font-medium text-slate-600 mb-1">
+            今月の消化出勤日数
+          </label>
+          <input
+            type="number"
+            id="completed-days"
+            value={completedWorkdays || ''}
+            onChange={(e) => onCompletedDaysChange(parseInt(e.target.value, 10) || 0)}
+            className="w-full border rounded-md p-2 text-lg font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="e.g., 5"
+            min="0"
           />
         </div>
         <div>
@@ -168,18 +219,20 @@ const ProgressTrackerSection: React.FC<ProgressTrackerSectionProps> = ({
     </div>
 
       {/* Display Results */}
-      <div className="grid lg:grid-cols-2 gap-4 pt-4">
+      <div className="grid lg:grid-cols-1 gap-4 pt-4">
         <TrackerDisplay
             title="主商材"
             goal={goals.main}
             totalOks={totalMonthOks.main}
-            remainingWorkdays={remainingWorkdays}
+            totalWorkdays={totalWorkdays}
+            completedWorkdays={completedWorkdays}
         />
         <TrackerDisplay
             title="電気"
             goal={goals.electricity}
             totalOks={totalMonthOks.electricity}
-            remainingWorkdays={remainingWorkdays}
+            totalWorkdays={totalWorkdays}
+            completedWorkdays={completedWorkdays}
         />
       </div>
     </section>

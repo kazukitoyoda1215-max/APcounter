@@ -523,6 +523,7 @@ const App: React.FC = () => {
 
        <footer className="text-center text-sm text-slate-500 pt-6 border-t mt-6">
         <p>Minimal Counter Copier v3.0 - React Edition with Daily Persistence</p>
+        <p className="mt-1">©toyosystem</p>
       </footer>
     </div>
   );

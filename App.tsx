@@ -280,7 +280,9 @@ const App: React.FC = () => {
     const base = totalOks + counts.ng + counts.ps;
     const rateMain = base ? (counts.okMain / base) * 100 : 0;
     const rateElectricity = base ? (counts.okElectricity / base) * 100 : 0;
-    return { total, rateMain, rateElectricity };
+    const effectiveCount = counts.okMain + counts.ng + counts.ps + counts.na;
+    const effectiveRate = counts.callsMade > 0 ? (effectiveCount / counts.callsMade) * 100 : 0;
+    return { total, rateMain, rateElectricity, effectiveRate };
   }, [counts]);
 
   const previewText = useMemo(() => {
@@ -517,6 +519,7 @@ const App: React.FC = () => {
           total={summary.total}
           rateMain={summary.rateMain}
           rateElectricity={summary.rateElectricity}
+          effectiveRate={summary.effectiveRate}
         />
         <CopySection textToCopy={previewText} />
       </main>

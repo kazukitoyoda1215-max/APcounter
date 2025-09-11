@@ -280,7 +280,7 @@ const App: React.FC = () => {
     const base = totalOks + counts.ng + counts.ps;
     const rateMain = base ? (counts.okMain / base) * 100 : 0;
     const rateElectricity = base ? (counts.okElectricity / base) * 100 : 0;
-    const effectiveCount = counts.okMain + counts.ng + counts.ps + counts.na;
+    const effectiveCount = counts.okMain + counts.ng + counts.ps;
     const effectiveRate = counts.callsMade > 0 ? (effectiveCount / counts.callsMade) * 100 : 0;
     return { total, rateMain, rateElectricity, effectiveRate };
   }, [counts]);

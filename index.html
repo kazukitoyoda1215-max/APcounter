@@ -1,23 +1,173 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>進捗確認くん</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-      @keyframes float-up {
-        from {
-          transform: translateY(0) scale(0.5);
-          opacity: 1;
-        }
-        to {
-          transform: translateY(-60px) scale(1);
-          opacity: 0;
-        }
+      :root {
+        /* --- Light Theme (Default) --- */
+        --bg-color: #eef2f5;
+        --text-dark: #3a416f;
+        --text-light: #8392ab;
+        --shadow-light: #ffffff;
+        --shadow-dark: #d1d9e6;
+        --color-primary: #8e96ff;
+        --color-secondary: #c9aeff;
+        --gradient: linear-gradient(60deg, var(--color-primary), var(--color-secondary));
+        --glow-opacity: 0;
+        --glow-color: transparent;
       }
-      .animate-float-up {
-        animation: float-up 1s ease-out forwards;
+
+      html[data-theme='dark'] {
+        --bg-color: #1f2937; /* Charcoal Gray */
+        --text-dark: #e5e7eb; /* Light Gray */
+        --text-light: #9ca3af; /* Medium Gray */
+        --shadow-light: #3a475a;
+        --shadow-dark: #111827;
+        --color-primary: #2563eb; /* Neon Blue */
+        --color-secondary: #34d399; /* Cyber Green */
+        --gradient: linear-gradient(60deg, var(--color-primary), var(--color-secondary));
+        --glow-opacity: 0.3;
+        --glow-color: var(--color-primary);
+      }
+
+      body {
+        font-family: 'Exo 2', sans-serif;
+        font-weight: 400;
+        color: var(--text-dark);
+        background-color: var(--bg-color);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      .text-gradient {
+        background: var(--gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-fill-color: transparent;
+        font-weight: 700;
+        text-shadow: 0 0 15px var(--glow-color) !important;
+        opacity: 1 !important;
+      }
+      
+      .text-color-dark { color: var(--text-dark); }
+      .text-color-light { color: var(--text-light); }
+      .text-color-danger { color: #e53e3e; }
+      .text-color-warning { color: #ed8936; }
+      .text-color-success { color: #48bb78; }
+
+      .neumorphic-card {
+        background: var(--bg-color);
+        border-radius: 20px;
+        box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+        transition: box-shadow 0.3s ease, background-color 0.3s ease;
+      }
+      
+      .neumorphic-card-inner {
+        background: var(--bg-color);
+        border-radius: 12px;
+        padding: 0.75rem;
+        box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+        transition: box-shadow 0.3s ease, background-color 0.3s ease;
+      }
+
+      .btn-neumorphic {
+        background: var(--bg-color);
+        color: var(--text-dark);
+        font-weight: 600;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+        transition: all 0.2s ease-in-out;
+      }
+      .btn-neumorphic:hover {
+        box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+      }
+      .btn-neumorphic:active, .btn-neumorphic.active {
+        box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+        transform: translateY(1px);
+        color: var(--text-light);
+      }
+      .btn-neumorphic.active .text-gradient {
+        text-shadow: none !important;
+      }
+
+      .btn-action-topbar {
+        background: var(--bg-color);
+        color: var(--text-dark);
+        font-weight: 600;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+        transition: all 0.2s ease-in-out;
+      }
+      .btn-action-topbar:hover {
+        box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+      }
+      .btn-action-topbar:active {
+        box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+        transform: translateY(1px);
+      }
+      html[data-theme='dark'] .btn-action-topbar:active {
+         color: var(--color-secondary);
+      }
+
+      .btn-gradient {
+        border: none;
+        border-radius: 10px;
+        background: var(--gradient);
+        color: white;
+        font-weight: 600;
+        box-shadow: 4px 4px 10px rgba(0,0,0,0.1), 0 0 20px var(--glow-color) inset;
+        transition: all 0.3s ease;
+      }
+      .btn-gradient:hover {
+        box-shadow: 6px 6px 15px rgba(0,0,0,0.15), 0 0 30px var(--glow-color) inset;
+        transform: translateY(-2px);
+      }
+      
+      .form-input-neumorphic {
+        background-color: var(--bg-color);
+        border-radius: 10px;
+        border: none;
+        padding: 0.75rem 1rem;
+        box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+        color: var(--text-dark);
+        width: 100%;
+        transition: all 0.3s ease;
+      }
+      .form-input-neumorphic:focus {
+        outline: none;
+        box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light), 0 0 0 2px var(--color-primary);
+      }
+
+      .progress-bar {
+        background-color: var(--bg-color);
+        box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+        border-radius: 9999px;
+        overflow: hidden;
+      }
+      .progress-bar-inner {
+        height: 100%;
+        border-radius: 9999px;
+        background: var(--gradient);
+        transition: width 0.5s ease-out;
+        box-shadow: 0 0 20px var(--glow-color);
+      }
+
+      .donut-chart-segment {
+        transition: stroke-dashoffset 0.5s ease-out;
+        transform-origin: 50% 50%;
+        filter: drop-shadow(0 0 5px var(--glow-color));
       }
     </style>
   <script type="importmap">
@@ -30,7 +180,7 @@
 }
 </script>
 </head>
-  <body class="bg-gradient-to-br from-slate-50 to-indigo-100 min-h-screen">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

@@ -1,532 +1,274 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import CounterSection from './components/CounterSection';
-import CopySection from './components/CopySection';
-import SummarySection from './components/SummarySection';
-import IndependentCounterSection from './components/IndependentCounterSection';
-import ProgressTrackerSection from './components/ProgressTrackerSection';
-import type { CounterState, CounterCategory, IndependentCounterCategory } from './types';
+import type { CounterState, OneClickActionCategory, View, Theme, Achievement, AchievementId } from './types';
+import TopBar from './components/TopBar';
+import DailyView from './views/DailyView';
+import MonthlyView from './views/MonthlyView';
+import AchievementsView from './views/AchievementsView';
 
-// --- Helper Functions ---
-const ymdLocal = (d: Date): string => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+// --- Helper Functions & Initial Data ---
+const ymdLocal = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const getDailyStorageKey = (d: Date): string => `ap_day_v3_${ymdLocal(d)}`;
+const getMonthlyStorageKey = (d: Date): string => `ap_month_v1_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+const getAchievementsStorageKey = (): string => 'ap_achievements_v1';
+const getStreakStorageKey = (): string => 'ap_streak_v1';
+
+const initialCounterState: CounterState = { okMain: 0, okElectricity: 0, ng: 0, ps: 0, na: 0, ex: 0, callsMade: 0, callsReceived: 0 };
+const initialMonthlySettings = {
+  goals: { main: 0, electricity: 0 },
+  workdays: { total: 20, completed: 0 },
+  adjustments: { main: 0, electricity: 0 },
 };
 
-const getStorageKey = (d: Date): string => `ap_day_v3_${ymdLocal(d)}`;
-const SETTINGS_STORAGE_KEY = 'ap_day_v3_settings_v3';
-
-const initialState: CounterState = { okMain: 0, okElectricity: 0, ng: 0, ps: 0, na: 0, ex: 0, callsMade: 0, callsReceived: 0 };
-
-// --- API Helper ---
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzxi7ldoGPbAjVH7VIeh3BOH-V56m3Rg1y2YpRlcFqm3WaWNehR61lW8xoRQaCbCaBdqw/exec";
-
-async function api<T = any>(
-  action: string,
-  payload: Record<string, any>,
-  timeoutMs = 10000
-): Promise<{ ok: boolean; data?: T; token?: string; error?: { code: number; message: string; }; }> {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-        const response = await fetch(API_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-            body: JSON.stringify({ action, ...payload }),
-            signal: controller.signal
-        });
-        clearTimeout(id);
-
-        let responseData: any;
-        try {
-            responseData = await response.json();
-        } catch {
-            return { ok: false, error: { code: 0, message: 'Invalid JSON from server' } };
-        }
-        
-        return responseData;
-
-    } catch (err: any) {
-        clearTimeout(id);
-        const message = err?.name === 'AbortError' ? 'Timeout' : String(err);
-        return { ok: false, error: { code: -1, message } };
-    }
-}
-
-
-// --- Auth Section Component ---
-interface AuthSectionProps {
-    isLoggedIn: boolean;
-    currentName: string;
-    name: string;
-    onNameChange: (value: string) => void;
-    password: any;
-    onPasswordChange: (value: string) => void;
-    message: string;
-    isRegisterPrompt: boolean;
-    onLogin: () => void;
-    onRegister: () => void;
-    onLogout: () => void;
-    onSave: () => void;
-    onLoad: () => void;
-}
-
-const AuthSection: React.FC<AuthSectionProps> = ({
-    isLoggedIn, currentName, name, onNameChange, password, onPasswordChange,
-    message, isRegisterPrompt, onLogin, onRegister, onLogout, onSave, onLoad
-}) => {
-    return (
-        <section className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">アカウント &amp; データ同期</h2>
-            
-            {!isLoggedIn ? (
-                <div className="space-y-3">
-                    <div className="grid sm:grid-cols-2 gap-3">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-slate-600 mb-1">ユーザー</label>
-                            <input type="text" id="name" value={name} onChange={e => onNameChange(e.target.value)} className="w-full border rounded-md p-2 focus:ring-2 focus:ring-indigo-500" />
-                        </div>
-                        <div>
-                            <label htmlFor="pw" className="block text-sm font-medium text-slate-600 mb-1">パスワード</label>
-                            <input type="password" id="pw" value={password} onChange={e => onPasswordChange(e.target.value)} className="w-full border rounded-md p-2 focus:ring-2 focus:ring-indigo-500" />
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <button onClick={onLogin} className="px-4 py-2 rounded-md bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">ログイン</button>
-                        {isRegisterPrompt && (
-                             <button onClick={onRegister} className="px-4 py-2 rounded-md bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">はい、登録します</button>
-                        )}
-                    </div>
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    <p className="text-slate-700">ようこそ、<span className="font-bold">{currentName}</span>さん</p>
-                     <div className="flex items-center gap-3 flex-wrap">
-                        <button onClick={onSave} className="px-4 py-2 rounded-md bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">データをクラウドに保存</button>
-                        <button onClick={onLoad} className="px-4 py-2 rounded-md bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">データをクラウドから復元</button>
-                        <button onClick={onLogout} className="px-4 py-2 rounded-md bg-slate-500 text-white font-semibold hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400">ログアウト</button>
-                    </div>
-                </div>
-            )}
-            
-            {message && (
-                <div className="text-sm text-slate-600 pt-2 border-t mt-3">{message}</div>
-            )}
-        </section>
-    );
-};
-
+const allAchievements: Omit<Achievement, 'unlocked' | 'unlockedDate'>[] = [
+    { id: 'FIRST_OK_MAIN', title: '最初の主商材OK', description: '初めて主商材のOKを獲得する' },
+    { id: 'TEN_OK_MAIN', title: '主商材マスター', description: '1日で主商材OKを10件獲得する' },
+    { id: 'MONTHLY_GOAL_MAIN', title: '月間目標達成 (主)', description: '主商材の月間目標を達成する' },
+    { id: 'TOTAL_CALLS_100', title: 'コール100件', description: '累計コール数が100件に到達' },
+    { id: 'TOTAL_CALLS_1000', title: 'コール1000件', description: '累計コール数が1000件に到達' },
+    { id: 'STREAK_5', title: '5日連続達成', description: '5日間連続で日次目標を達成する' },
+];
 
 // --- Main App Component ---
 const App: React.FC = () => {
-  const [counts, setCounts] = useState<CounterState>(initialState);
+  // Common State
   const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [userName] = useState<string>('T.Yoshi');
+  const [view, setView] = useState<View>('daily');
+  const [theme, setTheme] = useState<Theme>('light');
+
+  // Daily View State
+  const [counts, setCounts] = useState<CounterState>(initialCounterState);
   const [lastSaveTime, setLastSaveTime] = useState<string>('');
-  const [goals, setGoals] = useState<{ main: number; electricity: number }>({ main: 0, electricity: 0 });
-  const [totalWorkdays, setTotalWorkdays] = useState<number>(1);
-  const [completedWorkdays, setCompletedWorkdays] = useState<number>(0);
-  const [okAdjustments, setOkAdjustments] = useState<{ main: number; electricity: number }>({ main: 0, electricity: 0 });
+  const [dailyStreak, setDailyStreak] = useState(0);
 
-  // Auth state
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [currentName, setCurrentName] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [authMessage, setAuthMessage] = useState('');
-  const [isRegisterPrompt, setIsRegisterPrompt] = useState(false);
-  const [lastTried, setLastTried] = useState<{name: string, password: string} | null>(null);
+  // Monthly View State
+  const [monthlySettings, setMonthlySettings] = useState(initialMonthlySettings);
+  const [totalMonthOks, setTotalMonthOks] = useState({ main: 0, electricity: 0 });
+  const [monthlyChartData, setMonthlyChartData] = useState<CounterState>(initialCounterState);
 
-  // Logic to handle automatic reset of monthly settings
-  const handleMonthChange = useCallback((date: Date) => {
-    const currentMonth = ymdLocal(date).substring(0, 7);
+  // Achievements State
+  const [achievements, setAchievements] = useState<Record<AchievementId, Achievement>>(() => {
+      const initial: Partial<Record<AchievementId, Achievement>> = {};
+      allAchievements.forEach(a => {
+          initial[a.id] = { ...a, unlocked: false, unlockedDate: null };
+      });
+      return initial as Record<AchievementId, Achievement>;
+  });
+
+  // --- Effects ---
+
+  // Load all data on startup and date change
+  useEffect(() => {
+    // Theme
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    setTheme(savedTheme || 'light');
     
-    try {
-      const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        // If the saved month is different from the current month, reset settings
-        if (parsed.lastLoadedMonth !== currentMonth) {
-          setGoals({ main: 0, electricity: 0 });
-          setTotalWorkdays(1);
-          setCompletedWorkdays(0);
-          setOkAdjustments({ main: 0, electricity: 0 });
-        } else {
-          // Same month, load saved settings
-          setGoals({
-              main: parsed.goals?.main || 0,
-              electricity: parsed.goals?.electricity || 0,
-          });
-          setTotalWorkdays(parsed.totalWorkdays || 1);
-          setCompletedWorkdays(parsed.completedWorkdays || 0);
-          setOkAdjustments(parsed.okAdjustments || { main: 0, electricity: 0 });
-        }
-      }
-    } catch {
-      // On error, do nothing; initial state will be used
+    // Daily
+    const dailyKey = getDailyStorageKey(currentDate);
+    const savedDailyData = localStorage.getItem(dailyKey);
+    setCounts(savedDailyData ? JSON.parse(savedDailyData) : initialCounterState);
+
+    // Monthly
+    const monthlyKey = getMonthlyStorageKey(currentDate);
+    const savedMonthlyData = localStorage.getItem(monthlyKey);
+    setMonthlySettings(savedMonthlyData ? JSON.parse(savedMonthlyData) : initialMonthlySettings);
+    
+    // Achievements
+    const savedAchievements = localStorage.getItem(getAchievementsStorageKey());
+    if (savedAchievements) {
+        setAchievements(prev => ({...prev, ...JSON.parse(savedAchievements)}));
     }
-  }, []);
-
-
-  // Effect for loading data and checking for date changes
-  useEffect(() => {
-    const loadStateForDate = (date: Date) => {
-      const key = getStorageKey(date);
-      try {
-        const savedData = localStorage.getItem(key);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          setCounts({
-            okMain: parsed.okMain || 0,
-            okElectricity: parsed.okElectricity || 0,
-            ng: parsed.ng || 0,
-            ps: parsed.ps || 0,
-            na: parsed.na || 0,
-            ex: parsed.ex || 0,
-            callsMade: parsed.callsMade || 0,
-            callsReceived: parsed.callsReceived || 0,
-          });
-        } else {
-          setCounts(initialState);
-        }
-      } catch {
-        setCounts(initialState);
-      }
-    };
-
-    loadStateForDate(currentDate);
-
-    // Check if the month has changed and reset settings if necessary
-    handleMonthChange(currentDate);
-
-    const intervalId = setInterval(() => {
-      const today = new Date();
-      if (ymdLocal(today) !== ymdLocal(currentDate)) {
-        setCurrentDate(today);
-      }
-    }, 60000);
-
-    return () => clearInterval(intervalId);
-  }, [currentDate, handleMonthChange]);
-
-  // Effect for saving daily counts
-  useEffect(() => {
-    const key = getStorageKey(currentDate);
-    const dataToSave = { ...counts, _ts: Date.now() };
-    localStorage.setItem(key, JSON.stringify(dataToSave));
     
+    // Streak
+    const savedStreak = localStorage.getItem(getStreakStorageKey());
+    const streakData = savedStreak ? JSON.parse(savedStreak) : { count: 0, date: '' };
+    const todayStr = ymdLocal(new Date());
+    const yesterdayStr = ymdLocal(new Date(Date.now() - 86400000));
+    if (streakData.date === todayStr || streakData.date === yesterdayStr) {
+      setDailyStreak(streakData.count);
+    } else {
+      setDailyStreak(0); // Reset if streak is older than yesterday
+    }
+
+  }, [currentDate]);
+  
+  // Theme management
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+  
+  // Save daily counts
+  useEffect(() => {
+    localStorage.setItem(getDailyStorageKey(currentDate), JSON.stringify(counts));
     const now = new Date();
-    setLastSaveTime(`保存: ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    setLastSaveTime(`自動保存: ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
   }, [counts, currentDate]);
-
-  // Effect for saving settings
+  
+  // Save monthly settings
   useEffect(() => {
-    const currentMonth = ymdLocal(currentDate).substring(0, 7);
-    const settingsToSave = { 
-        goals, 
-        totalWorkdays,
-        completedWorkdays,
-        okAdjustments,
-        lastLoadedMonth: currentMonth
-    };
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsToSave));
-  }, [goals, totalWorkdays, completedWorkdays, okAdjustments, currentDate]);
+    localStorage.setItem(getMonthlyStorageKey(currentDate), JSON.stringify(monthlySettings));
+  }, [monthlySettings, currentDate]);
 
-  // Effect for auth check on boot
+  // Save achievements
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedName = localStorage.getItem('ap_day_v3_username');
-    if (token && storedName) {
-        setIsLoggedIn(true);
-        setCurrentName(storedName);
-        setName(storedName);
-        setAuthMessage(`おかえりなさい、${storedName}さん`);
-    }
-  }, []);
+    localStorage.setItem(getAchievementsStorageKey(), JSON.stringify(achievements));
+  }, [achievements]);
+  
+  // Save streak
+  useEffect(() => {
+    const todayStr = ymdLocal(new Date());
+    localStorage.setItem(getStreakStorageKey(), JSON.stringify({ count: dailyStreak, date: todayStr }));
+  }, [dailyStreak]);
+  
+  const dailyMainGoal = useMemo(() => {
+    const { goals, workdays } = monthlySettings;
+    const remainingGoals = goals.main - totalMonthOks.main;
+    const remainingWorkdays = workdays.total - workdays.completed;
+    if (remainingGoals <= 0) return 0;
+    if (remainingWorkdays <= 0) return remainingGoals;
+    const goal = Math.ceil(remainingGoals / remainingWorkdays);
+    return goal > 0 ? goal : 0;
+  }, [monthlySettings, totalMonthOks]);
+  
+  // Calculate monthly totals & check achievements
+  useEffect(() => {
+      let totalMain = 0;
+      let totalElec = 0;
+      let totalCalls = 0;
+      const aggregatedMonthData: CounterState = { ...initialCounterState };
 
-  // Calculate total OKs for the current month
-  const totalMonthOks = useMemo(() => {
-    const ymd = ymdLocal(currentDate);
-    const currentMonthPrefix = `ap_day_v3_${ymd.substring(0, 7)}`; // e.g., "ap_day_v3_2023-10"
-    let totalMain = 0;
-    let totalElectricity = 0;
-
-    for (let i = 0; i < localStorage.length; i++) {
+      for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        // Check if the key is for the current month but not for today
-        if (key && key.startsWith(currentMonthPrefix) && key !== getStorageKey(currentDate)) {
-            try {
-                const data = JSON.parse(localStorage.getItem(key) || '{}');
-                if (data) {
-                    totalMain += data.okMain || 0;
-                    totalElectricity += data.okElectricity || 0;
-                }
-            } catch (e) {
-                // ignore parsing errors
-            }
+        if (key && key.startsWith('ap_day_v3_')) {
+          const savedData = localStorage.getItem(key);
+          if (savedData) {
+              const parsed: Partial<CounterState> = JSON.parse(savedData);
+              totalCalls += parsed.callsMade || 0;
+              const datePart = key.substring('ap_day_v3_'.length);
+              const [year, month] = datePart.split('-').map(Number);
+              if (year === currentDate.getFullYear() && (month - 1) === currentDate.getMonth()) {
+                totalMain += parsed.okMain || 0;
+                totalElec += parsed.okElectricity || 0;
+                Object.keys(aggregatedMonthData).forEach(cat => {
+                    (aggregatedMonthData as any)[cat] += parsed[cat as keyof CounterState] || 0;
+                });
+              }
+          }
         }
-    }
-    return {
-        main: totalMain + counts.okMain + okAdjustments.main,
-        electricity: totalElectricity + counts.okElectricity + okAdjustments.electricity
-    };
-  }, [currentDate, counts.okMain, counts.okElectricity, okAdjustments]);
+      }
+      const finalTotalMonthOks = { 
+        main: totalMain + monthlySettings.adjustments.main,
+        electricity: totalElec + monthlySettings.adjustments.electricity 
+      };
+      setTotalMonthOks(finalTotalMonthOks);
+      setMonthlyChartData(aggregatedMonthData);
 
-  const summary = useMemo(() => {
-    const totalOks = counts.okMain + counts.okElectricity;
-    const total = totalOks + counts.ng + counts.ps + counts.na + counts.ex;
-    const base = totalOks + counts.ng + counts.ps;
-    const rateMain = base ? (counts.okMain / base) * 100 : 0;
-    const rateElectricity = base ? (counts.okElectricity / base) * 100 : 0;
-    const effectiveCount = counts.okMain + counts.ng + counts.ps;
-    const totalCalls = counts.callsMade + counts.callsReceived;
-    const effectiveRate = totalCalls > 0 ? (effectiveCount / totalCalls) * 100 : 0;
-    return { total, rateMain, rateElectricity, effectiveRate };
-  }, [counts]);
+      // --- Achievement & Streak Checks ---
+      const newAchievements = { ...achievements };
+      const unlockAchievement = (id: AchievementId) => {
+          if (!newAchievements[id].unlocked) {
+              newAchievements[id] = { ...newAchievements[id], unlocked: true, unlockedDate: ymdLocal(new Date()) };
+          }
+      };
+
+      if (counts.okMain >= 1) unlockAchievement('FIRST_OK_MAIN');
+      if (counts.okMain >= 10) unlockAchievement('TEN_OK_MAIN');
+      if (finalTotalMonthOks.main >= monthlySettings.goals.main && monthlySettings.goals.main > 0) unlockAchievement('MONTHLY_GOAL_MAIN');
+      if (totalCalls >= 100) unlockAchievement('TOTAL_CALLS_100');
+      if (totalCalls >= 1000) unlockAchievement('TOTAL_CALLS_1000');
+      
+      const currentOks = counts.okMain + counts.okElectricity;
+      if (dailyMainGoal > 0 && currentOks >= dailyMainGoal) {
+          const savedStreak = localStorage.getItem(getStreakStorageKey());
+          const streakData = savedStreak ? JSON.parse(savedStreak) : { count: 0, date: '' };
+          const todayStr = ymdLocal(new Date());
+          
+          if (streakData.date !== todayStr) {
+             const yesterdayStr = ymdLocal(new Date(Date.now() - 86400000));
+             const newStreak = streakData.date === yesterdayStr ? streakData.count + 1 : 1;
+             setDailyStreak(newStreak);
+          }
+      }
+      if (dailyStreak >= 5) unlockAchievement('STREAK_5');
+
+      setAchievements(newAchievements);
+
+  }, [counts, monthlySettings, currentDate, dailyMainGoal, dailyStreak]);
 
   const previewText = useMemo(() => {
     const d = ymdLocal(currentDate);
-    return `${d}　OK(主) ${counts.okMain}件 / OK(電) ${counts.okElectricity}件 / NG ${counts.ng}件 / 見込み ${counts.ps}件 / 留守 ${counts.na}件 / 取次対象外 ${counts.ex}件 / コール ${counts.callsMade}件 / 入電 ${counts.callsReceived}件（合計 ${summary.total}件・成約率(主) ${summary.rateMain.toFixed(1)}% / 成約率(電) ${summary.rateElectricity.toFixed(1)}%）`;
-  }, [counts, currentDate, summary]);
+    const totalOks = counts.okMain + counts.okElectricity;
+    const mainOkAndNg = counts.okMain + counts.ng;
+    const effectiveRate = mainOkAndNg > 0 ? (counts.okMain / mainOkAndNg) * 100 : 0;
+    const conversionRate = counts.callsMade > 0 ? (totalOks / counts.callsMade) * 100 : 0;
 
-  // --- Auth Logic Callbacks ---
-  const showAuthMessage = (msg: string, isPrompt = false) => {
-    setAuthMessage(msg);
-    setIsRegisterPrompt(isPrompt);
-  };
-
-  const loginFlow = useCallback(async () => {
-    const trimmedName = name.trim();
-    if (!trimmedName || !password) {
-        return showAuthMessage('ユーザーとパスワードを入力してください');
-    }
-    showAuthMessage('ログイン中…');
-    setLastTried({ name: trimmedName, password });
-
-    const r = await api('/auth/login', { name: trimmedName, password });
-
-    if (r.ok && r.token) {
-        localStorage.setItem('token', r.token);
-        localStorage.setItem('ap_day_v3_username', trimmedName);
-        setCurrentName(trimmedName);
-        setIsLoggedIn(true);
-        showAuthMessage('ログイン成功！');
-    } else {
-        if (r.error?.code === 404) {
-            showAuthMessage('このユーザーが見つかりません。新規登録しますか？', true);
-        } else if (r.error?.code === 401) {
-            showAuthMessage('パスワードが違います。');
-        } else {
-            showAuthMessage('エラー: ' + (r.error?.message || '不明なエラー'));
-        }
-    }
-  }, [name, password]);
-
-  const registerFlow = useCallback(async () => {
-    if (!lastTried) return;
-    const { name: lastName, password: lastPassword } = lastTried;
-    showAuthMessage('登録中…');
-    const r = await api('/auth/register', { name: lastName, password: lastPassword });
-    if (!r.ok) {
-        if (r.error?.code === 409) return showAuthMessage('すでに登録済みです。ログインしてください。');
-        return showAuthMessage('登録エラー: ' + (r.error?.message || '不明なエラー'));
-    }
-    await loginFlow();
-  }, [lastTried, loginFlow]);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('ap_day_v3_username');
-    setIsLoggedIn(false);
-    setCurrentName(null);
-    setName('');
-    setPassword('');
-    showAuthMessage('ログアウトしました');
-  }, []);
-
-  const saveDataToServer = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token || !currentName) return showAuthMessage('未ログイン');
-    
-    showAuthMessage('保存中...');
-    try {
-        const dataToSave: { [key: string]: string } = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('ap_day_v3_')) {
-                dataToSave[key] = localStorage.getItem(key) || '';
-            }
-        }
-        const r = await api('/data/set', { name: currentName, data: dataToSave, authorization: token });
-        if (r.ok) {
-            showAuthMessage('保存しました');
-        } else {
-            showAuthMessage('保存エラー: ' + (r.error?.message || '不明なエラー'));
-        }
-    } catch (e) {
-        showAuthMessage('保存中にエラーが発生しました。');
-    }
-  }, [currentName]);
-
-  const loadDataFromServer = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token || !currentName) return showAuthMessage('未ログイン');
-
-    if (!confirm('サーバーからデータをロードすると、現在のローカルデータは上書きされます。よろしいですか？')) return;
-
-    showAuthMessage('ロード中...');
-    const r = await api<{ [key: string]: string }>('/data/get', { name: currentName, authorization: token });
-    if (r.ok && r.data) {
-        const dataToImport = r.data;
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('ap_day_v3_')) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-
-        for (const key in dataToImport) {
-            if (Object.prototype.hasOwnProperty.call(dataToImport, key) && key.startsWith('ap_day_v3_')) {
-                localStorage.setItem(key, dataToImport[key]);
-            }
-        }
-        alert('データのロードが完了しました。ページをリロードします。');
-        window.location.reload();
-    } else {
-        showAuthMessage('データ取得エラー: ' + (r.error?.message || '不明なエラー'));
-    }
-  }, [currentName]);
-
-
-  // --- Event Handlers ---
-  const handleIncrement = useCallback((category: CounterCategory) => {
-    setCounts(prevCounts => ({
-      ...prevCounts,
-      [category]: prevCounts[category] + 1,
-    }));
-  }, []);
-
-  const handleDecrement = useCallback((category: CounterCategory) => {
-    setCounts(prevCounts => ({
-      ...prevCounts,
-      [category]: Math.max(0, prevCounts[category] - 1),
-    }));
-  }, []);
-
-  const handleCountChange = useCallback((category: CounterCategory, value: number) => {
-    const numericValue = isNaN(value) ? 0 : Math.max(0, value); // ensure non-negative and is a number
-    setCounts(prevCounts => ({
-      ...prevCounts,
-      [category]: numericValue,
-    }));
-  }, []);
-
-  const handleIndependentIncrement = useCallback((category: IndependentCounterCategory) => {
-    setCounts(prevCounts => ({
-      ...prevCounts,
-      [category]: prevCounts[category] + 1,
-    }));
-  }, []);
-
-  const handleIndependentDecrement = useCallback((category: IndependentCounterCategory) => {
-    setCounts(prevCounts => ({
-      ...prevCounts,
-      [category]: Math.max(0, prevCounts[category] - 1),
-    }));
-  }, []);
-
-  const handleGoalChange = useCallback((category: 'main' | 'electricity', value: number) => {
-    setGoals(prevGoals => ({
-        ...prevGoals,
-        [category]: Math.max(0, value),
-    }));
-  }, []);
-
-  const handleTotalDaysChange = useCallback((value: number) => {
-    setTotalWorkdays(Math.max(1, value));
-  }, []);
-
-  const handleCompletedDaysChange = useCallback((value: number) => {
-    setCompletedWorkdays(Math.max(0, value));
-  }, []);
+    return `${d} 業務報告 ${userName}\n` +
+           `【成果】OK ${totalOks}件 (主:${counts.okMain} / 電:${counts.okElectricity}), NG ${counts.ng}件, 見込み ${counts.ps}件\n` +
+           `【指標】成約率: ${conversionRate.toFixed(1)}%, 有効率: ${effectiveRate.toFixed(1)}%\n` +
+           `【その他】留守 ${counts.na}件, 対象外 ${counts.ex}件\n` +
+           `【稼働】架電 ${counts.callsMade}件, 入電 ${counts.callsReceived}件`;
+  }, [counts, currentDate, userName]);
   
-  const handleAdjustmentChange = useCallback((category: 'main' | 'electricity', value: number) => {
-    setOkAdjustments(prev => ({
-        ...prev,
-        [category]: isNaN(value) ? 0 : value,
-    }));
+
+  const handleIncrement = useCallback((category: keyof CounterState) => setCounts(p => ({...p, [category]: p[category] + 1})), []);
+  const handleDecrement = useCallback((category: keyof CounterState) => setCounts(p => ({...p, [category]: Math.max(0, p[category] - 1)})), []);
+  const handleCountChange = useCallback((category: keyof CounterState, value: number) => setCounts(p => ({...p, [category]: Math.max(0, value)})), []);
+  const handleClearDailyData = useCallback(() => { if(window.confirm('本日のカウンターをすべてリセットしますか？')) setCounts(initialCounterState); }, []);
+  const handleOneClickAction = useCallback((category: OneClickActionCategory) => {
+    setCounts(prev => {
+        const newCounts = { ...prev, callsMade: prev.callsMade + 1 };
+        if (category === 'ok') newCounts.okMain += 1;
+        else newCounts[category] += 1;
+        return newCounts;
+    });
   }, []);
 
-  const handleClear = useCallback(() => {
-    const { callsMade, callsReceived } = counts;
-    setCounts({ ...initialState, callsMade, callsReceived });
-  }, [counts]);
+  const handleMonthlySettingsChange = useCallback(<K extends keyof typeof initialMonthlySettings, T extends keyof (typeof initialMonthlySettings)[K]>(
+    section: K, field: T, value: number
+  ) => setMonthlySettings(p => ({...p, [section]: {...p[section], [field]: isNaN(value) ? 0 : value }})), []);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-      <header className="text-center py-4">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">進捗確認くん</h1>
-        <p className="text-slate-600 mt-2">日々の活動を記録し、ワンクリックで報告テキストをコピーします。（当日データ自動保存）</p>
-      </header>
-
-      <AuthSection
-        isLoggedIn={isLoggedIn}
-        currentName={currentName || ''}
-        name={name}
-        onNameChange={setName}
-        password={password}
-        onPasswordChange={setPassword}
-        message={authMessage}
-        isRegisterPrompt={isRegisterPrompt}
-        onLogin={loginFlow}
-        onRegister={registerFlow}
-        onLogout={logout}
-        onSave={saveDataToServer}
-        onLoad={loadDataFromServer}
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <TopBar 
+        userName={userName}
+        activeView={view} 
+        onViewChange={setView} 
+        theme={theme}
+        onThemeChange={setTheme}
       />
-
-      <main className="space-y-6">
-        <CounterSection
+      
+      {view === 'daily' && (
+        <DailyView 
+          onOneClickAction={handleOneClickAction}
           counts={counts}
+          dailyGoal={dailyMainGoal}
+          dailyStreak={dailyStreak}
           onIncrement={handleIncrement}
           onDecrement={handleDecrement}
-          onClear={handleClear}
-          lastSaveTime={lastSaveTime}
           onCountChange={handleCountChange}
+          onClear={handleClearDailyData}
+          lastSaveTime={lastSaveTime}
+          previewText={previewText}
         />
-        <IndependentCounterSection
-          callsMade={counts.callsMade}
-          callsReceived={counts.callsReceived}
-          onIncrement={handleIndependentIncrement}
-          onDecrement={handleIndependentDecrement}
-        />
-        <ProgressTrackerSection
-          goals={goals}
-          totalWorkdays={totalWorkdays}
-          completedWorkdays={completedWorkdays}
+      )}
+      {view === 'monthly' && (
+        <MonthlyView
+          currentDate={currentDate}
+          counts={counts}
+          monthlySettings={monthlySettings}
+          onSettingsChange={handleMonthlySettingsChange}
           totalMonthOks={totalMonthOks}
-          onGoalChange={handleGoalChange}
-          onTotalDaysChange={handleTotalDaysChange}
-          onCompletedDaysChange={handleCompletedDaysChange}
-          okAdjustments={okAdjustments}
-          onAdjustmentChange={handleAdjustmentChange}
+          monthlyChartData={monthlyChartData}
         />
-        <SummarySection
-          date={ymdLocal(currentDate)}
-          total={summary.total}
-          rateMain={summary.rateMain}
-          rateElectricity={summary.rateElectricity}
-          effectiveRate={summary.effectiveRate}
-        />
-        <CopySection textToCopy={previewText} />
-      </main>
+      )}
+      {view === 'achievements' && (
+        <AchievementsView achievements={Object.values(achievements)} />
+      )}
 
-       <footer className="text-center text-sm text-slate-500 pt-6 border-t mt-6">
-        <p>Minimal Counter Copier v3.0 - React Edition with Daily Persistence</p>
+       <footer className="text-center text-sm text-color-light pt-6 border-t border-[var(--shadow-dark)] mt-6">
+        <p>Sales Dashboard v7.0 - Gamification Edition</p>
         <p className="mt-1">©toyosystem</p>
       </footer>
     </div>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { CounterState, CounterCategory } from '../types';
 import CounterCard from './CounterCard';
@@ -23,8 +22,8 @@ const counterCategories: { key: CounterCategory, label: string }[] = [
 
 const CounterSection: React.FC<CounterSectionProps> = ({ counts, onIncrement, onDecrement, onClear, lastSaveTime, onCountChange }) => {
   return (
-    <section className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
-      <h2 className="text-lg font-semibold text-slate-800">カウンター</h2>
+    <section className="neumorphic-card p-4 sm:p-5 space-y-4">
+      <h2 className="text-lg font-semibold text-color-dark">カウンター</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center">
         {counterCategories.map(({ key, label }) => {
           const isEditable = key === 'okMain' || key === 'okElectricity';
@@ -42,10 +41,10 @@ const CounterSection: React.FC<CounterSectionProps> = ({ counts, onIncrement, on
         })}
       </div>
       <div className="flex gap-3 justify-end items-center pt-2">
-        <span className="text-sm text-slate-500 mr-auto h-5">{lastSaveTime}</span>
+        <span className="text-sm text-color-light mr-auto h-5">{lastSaveTime}</span>
         <button 
             onClick={onClear} 
-            className="px-4 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            className="btn-neumorphic btn-danger px-4 py-2 font-semibold text-sm"
         >
           当日データをクリア
         </button>

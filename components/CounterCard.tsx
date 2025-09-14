@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 
 interface FloatingEmoji {
@@ -44,7 +43,7 @@ const CounterCard: React.FC<CounterCardProps> = ({ label, count, onIncrement, on
   };
 
   return (
-    <div className="rounded-xl border bg-white p-3 flex flex-col justify-between relative overflow-hidden">
+    <div className="neumorphic-card-inner p-3 flex flex-col justify-between relative overflow-hidden text-center">
       {floatingEmojis.map(emoji => (
         <div
           key={emoji.id}
@@ -58,30 +57,30 @@ const CounterCard: React.FC<CounterCardProps> = ({ label, count, onIncrement, on
           👍
         </div>
       ))}
-      <div className="font-medium text-slate-700">{label}</div>
+      <div className="font-medium text-color-light">{label}</div>
       {isEditable ? (
         <input
             type="number"
             value={count}
             onChange={handleInputChange}
-            className="w-full text-center text-4xl font-bold text-slate-900 my-2 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none border-gray-200 p-0"
+            className="w-full text-center text-4xl font-bold text-color-dark my-2 rounded-md p-0 form-input-neumorphic"
             aria-label={`${label} count input`}
             min="0"
         />
       ) : (
-        <div className="text-4xl font-bold text-slate-900 my-2">{count}</div>
+        <div className="text-4xl text-gradient my-2">{count}</div>
       )}
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button 
           onClick={onDecrement} 
-          className="w-full px-3 py-1.5 rounded-md bg-slate-200 text-slate-700 font-bold hover:bg-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400"
+          className="w-full px-3 py-1.5 btn-neumorphic font-bold"
           aria-label={`Decrement ${label}`}
         >
           -
         </button>
         <button 
           onClick={handleIncrement} 
-          className="w-full px-3 py-1.5 rounded-md bg-indigo-500 text-white font-bold hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          className="w-full px-3 py-1.5 btn-gradient text-base"
           aria-label={`Increment ${label}`}
         >
           +

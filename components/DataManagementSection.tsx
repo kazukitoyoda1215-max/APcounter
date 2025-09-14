@@ -1,4 +1,3 @@
-
 import React, { useCallback, useRef } from 'react';
 
 const DataManagementSection: React.FC = () => {
@@ -112,22 +111,22 @@ const DataManagementSection: React.FC = () => {
     };
 
     return (
-        <section className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">ローカルデータ管理</h2>
-            <p className="text-sm text-slate-600">
+        <section className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-200">ローカルデータ管理</h2>
+            <p className="text-sm text-gray-400">
                 現在のカウンターデータをファイルにエクスポート（バックアップ）したり、ファイルからインポート（復元）したりできます。
                 インポートを行うと現在のデータはすべて上書きされますのでご注意ください。
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                     onClick={handleExport}
-                    className="px-5 py-2 rounded-md bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                    className="btn-neon btn-neon-sky px-5 py-2 font-semibold"
                 >
                     データをエクスポート
                 </button>
                 <button
                     onClick={triggerFileSelect}
-                    className="px-5 py-2 rounded-md bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                    className="btn-neon btn-neon-teal px-5 py-2 font-semibold"
                 >
                     データをインポート
                 </button>

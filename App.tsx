@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { CounterState, OneClickActionCategory, View, Theme, Achievement, AchievementId } from './types';
 import TopBar from './components/TopBar';
@@ -274,7 +275,8 @@ const App: React.FC = () => {
     const totalOks = counts.okMain + counts.okElectricity;
     const mainOkAndNg = counts.okMain + counts.ng;
     const effectiveRate = mainOkAndNg > 0 ? (counts.okMain / mainOkAndNg) * 100 : 0;
-    const conversionRate = counts.callsMade > 0 ? (totalOks / counts.callsMade) * 100 : 0;
+    const effectiveCalls = counts.callsMade - counts.ex;
+    const conversionRate = effectiveCalls > 0 ? (totalOks / effectiveCalls) * 100 : 0;
 
     return `${d} 業務報告 ${userName}\n` +
            `【成果】OK ${totalOks}件 (主:${counts.okMain} / 電:${counts.okElectricity}), NG ${counts.ng}件, 見込み ${counts.ps}件\n` +

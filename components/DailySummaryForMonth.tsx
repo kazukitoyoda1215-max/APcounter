@@ -1,4 +1,5 @@
 
+
 import React, { useMemo } from 'react';
 import { CounterState } from '../types';
 
@@ -19,8 +20,9 @@ const DailySummaryForMonth: React.FC<DailySummaryForMonthProps> = ({ currentDate
     const totalOks = counts.okMain; // Only count main product OKs as per user request
     const mainOkAndNg = counts.okMain + counts.ng;
     const effectiveRate = mainOkAndNg > 0 ? (counts.okMain / mainOkAndNg) * 100 : 0;
-    const conversionRateMain = counts.callsMade > 0 ? (counts.okMain / counts.callsMade) * 100 : 0;
-    const conversionRateElec = counts.callsMade > 0 ? (counts.okElectricity / counts.callsMade) * 100 : 0;
+    const effectiveCalls = counts.callsMade - counts.ex;
+    const conversionRateMain = effectiveCalls > 0 ? (counts.okMain / effectiveCalls) * 100 : 0;
+    const conversionRateElec = effectiveCalls > 0 ? (counts.okElectricity / effectiveCalls) * 100 : 0;
     
     return {
       totalOks,

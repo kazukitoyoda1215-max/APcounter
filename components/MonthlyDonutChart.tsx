@@ -1,4 +1,5 @@
 
+
 import React, { useMemo } from 'react';
 import { CounterState } from '../types';
 
@@ -83,14 +84,15 @@ const MonthlyDonutChart: React.FC<MonthlyDonutChartProps> = ({ chartData }) => {
     }, [chartData]);
     
     const { mainRate, elecRate, totalRate } = useMemo(() => {
-        if (!chartData.callsMade || chartData.callsMade === 0) {
+        const effectiveCalls = chartData.callsMade - chartData.ex;
+        if (effectiveCalls <= 0) {
             return { mainRate: 0, elecRate: 0, totalRate: 0 };
         }
         const totalOks = chartData.okMain + chartData.okElectricity;
         return {
-            mainRate: (chartData.okMain / chartData.callsMade) * 100,
-            elecRate: (chartData.okElectricity / chartData.callsMade) * 100,
-            totalRate: (totalOks / chartData.callsMade) * 100,
+            mainRate: (chartData.okMain / effectiveCalls) * 100,
+            elecRate: (chartData.okElectricity / effectiveCalls) * 100,
+            totalRate: (totalOks / effectiveCalls) * 100,
         };
     }, [chartData]);
 

@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { View, Theme } from '../types';
 import Navigation from './Navigation';
@@ -10,9 +11,10 @@ interface TopBarProps {
   onViewChange: (view: View) => void;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
+  onLogout: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, theme, onThemeChange }) => {
+const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, theme, onThemeChange, onLogout }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
@@ -30,7 +32,7 @@ const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, the
           </div>
           {isProfileOpen && (
               <div className="absolute top-full right-0 mt-2 w-48 neumorphic-card p-2 z-10">
-                  <button className="w-full text-left px-3 py-2 text-sm text-color-dark hover:bg-[var(--shadow-dark)] rounded-md transition-colors">
+                  <button onClick={onLogout} className="w-full text-left px-3 py-2 text-sm text-color-dark hover:bg-[var(--shadow-dark)] rounded-md transition-colors">
                       ログアウト
                   </button>
               </div>

@@ -177,6 +177,16 @@ const App: React.FC = () => {
     const goal = Math.ceil(remainingGoals / remainingWorkdays);
     return goal > 0 ? goal : 0;
   }, [monthlySettings, totalMonthOks]);
+  
+  const dailyElectricityGoal = useMemo(() => {
+    const { goals, workdays } = monthlySettings;
+    const remainingGoals = goals.electricity - totalMonthOks.electricity;
+    const remainingWorkdays = workdays.total - workdays.completed;
+    if (remainingGoals <= 0) return 0;
+    if (remainingWorkdays <= 0) return remainingGoals;
+    const goal = Math.ceil(remainingGoals / remainingWorkdays);
+    return goal > 0 ? goal : 0;
+  }, [monthlySettings, totalMonthOks]);
 
   // Achievement check effect
   useEffect(() => {
@@ -202,7 +212,7 @@ const App: React.FC = () => {
     if (allTimeTotalCalls >= 1000) unlockAchievement('TOTAL_CALLS_1000');
     
     let newStreak = dailyStreak;
-    const currentOks = counts.okMain + counts.okElectricity;
+    const currentOks = counts.okMain; // Streak is based on main product only
     if (dailyMainGoal > 0 && currentOks >= dailyMainGoal) {
         const todayStr = ymdLocal(new Date());
         if (dailyStreakData.date !== todayStr) {
@@ -373,7 +383,8 @@ const App: React.FC = () => {
         <DailyView 
           onOneClickAction={handleOneClickAction}
           counts={counts}
-          dailyGoal={dailyMainGoal}
+          dailyMainGoal={dailyMainGoal}
+          dailyElectricityGoal={dailyElectricityGoal}
           dailyStreak={dailyStreak}
           onIncrement={handleIncrement}
           onDecrement={handleDecrement}

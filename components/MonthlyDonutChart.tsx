@@ -73,20 +73,51 @@ interface MonthlyDonutChartProps {
 const MonthlyDonutChart: React.FC<MonthlyDonutChartProps> = ({ chartData }) => {
     
     const formattedChartData = useMemo(() => {
-        const totalOks = chartData.okMain + chartData.okElectricity;
         const others = chartData.ps + chartData.na + chartData.ex;
         return [
-            { label: 'OK', value: totalOks, color: 'var(--color-primary)' },
+            { label: 'OK (主商材)', value: chartData.okMain, color: 'var(--color-primary)' },
+            { label: 'OK (電気)', value: chartData.okElectricity, color: 'var(--color-secondary)' },
             { label: 'NG', value: chartData.ng, color: 'var(--color-danger)' },
             { label: 'その他', value: others, color: 'var(--text-light)' },
         ].filter(item => item.value > 0);
     }, [chartData]);
+    
+    const { mainRate, elecRate, totalRate } = useMemo(() => {
+        if (!chartData.callsMade || chartData.callsMade === 0) {
+            return { mainRate: 0, elecRate: 0, totalRate: 0 };
+        }
+        const totalOks = chartData.okMain + chartData.okElectricity;
+        return {
+            mainRate: (chartData.okMain / chartData.callsMade) * 100,
+            elecRate: (chartData.okElectricity / chartData.callsMade) * 100,
+            totalRate: (totalOks / chartData.callsMade) * 100,
+        };
+    }, [chartData]);
+
 
     return (
         <section className="neumorphic-card p-4 sm:p-5 space-y-3">
-          <h2 className="text-lg font-semibold text-color-dark">月次成果グラフ</h2>
-          <div className="neumorphic-card-inner p-3 flex items-center justify-center min-h-[228px]">
+          <h2 className="text-lg font-semibold text-color-dark">月次サマリー</h2>
+          <div className="neumorphic-card-inner p-3 flex flex-col items-center justify-center min-h-[228px] gap-4">
+              <h3 className="text-md font-semibold text-color-dark -mb-2">成果グラフ</h3>
               <Chart data={formattedChartData} />
+          </div>
+          <div className="neumorphic-card-inner p-3 text-center space-y-2">
+            <h3 className="text-md font-semibold text-color-dark">成約率</h3>
+            <div className="grid grid-cols-3 gap-2">
+                <div>
+                    <div className="text-sm text-color-light">主商材</div>
+                    <div className="text-lg font-semibold text-gradient">{mainRate.toFixed(1)}%</div>
+                </div>
+                <div>
+                    <div className="text-sm text-color-light">電気</div>
+                    <div className="text-lg font-semibold text-gradient">{elecRate.toFixed(1)}%</div>
+                </div>
+                <div>
+                    <div className="text-sm text-color-light">合計</div>
+                    <div className="text-lg font-semibold text-gradient">{totalRate.toFixed(1)}%</div>
+                </div>
+            </div>
           </div>
         </section>
     );

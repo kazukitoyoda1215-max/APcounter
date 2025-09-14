@@ -9,7 +9,8 @@ import CallControl from '../components/CallControl';
 interface DailyViewProps {
   onOneClickAction: (category: OneClickActionCategory) => void;
   counts: CounterState;
-  dailyGoal: number;
+  dailyMainGoal: number;
+  dailyElectricityGoal: number;
   dailyStreak: number;
   onIncrement: (category: keyof CounterState) => void;
   onDecrement: (category: keyof CounterState) => void;
@@ -58,8 +59,10 @@ const DailyView: React.FC<DailyViewProps> = (props) => {
         lastSaveTime={props.lastSaveTime}
       />
       <DailyGoalsDashboard 
-        dailyGoal={props.dailyGoal}
-        currentOks={props.counts.okMain + props.counts.okElectricity}
+        dailyMainGoal={props.dailyMainGoal}
+        dailyElectricityGoal={props.dailyElectricityGoal}
+        currentMainOks={props.counts.okMain}
+        currentElectricityOks={props.counts.okElectricity}
         dailyStreak={props.dailyStreak}
       />
       <ReportingConsole textToCopy={props.previewText} />

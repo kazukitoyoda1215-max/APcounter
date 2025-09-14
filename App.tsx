@@ -29,6 +29,13 @@ const allAchievements: Omit<Achievement, 'unlocked' | 'unlockedDate'>[] = [
     { id: 'TOTAL_CALLS_100', title: 'コール100件', description: '累計コール数が100件に到達' },
     { id: 'TOTAL_CALLS_1000', title: 'コール1000件', description: '累計コール数が1000件に到達' },
     { id: 'STREAK_5', title: '5日連続達成', description: '5日間連続で日次目標を達成する' },
+    // New Achievements
+    { id: 'FIRST_OK_ELEC', title: '最初の電気OK', description: '初めて電気のOKを獲得する' },
+    { id: 'TEN_OK_ELEC', title: '電気マスター', description: '1日で電気OKを10件獲得する' },
+    { id: 'MONTHLY_GOAL_ELEC', title: '月間目標達成 (電)', description: '電気の月間目標を達成する' },
+    { id: 'PERFECT_DAY', title: 'パーフェクトデイ', description: '主商材と電気の日次目標を両方達成' },
+    { id: 'STREAK_10', title: '10日連続達成', description: '10日間連続で日次目標を達成する' },
+    { id: 'TOTAL_OK_MAIN_100', title: '主商材OK 100件', description: '累計の主商材OKが100件に到達' },
 ];
 
 const initialAchievements = (): Record<AchievementId, Achievement> => {
@@ -165,7 +172,14 @@ const App: React.FC = () => {
       main: totalMain + monthlySettings.adjustments.main,
       electricity: totalElec + monthlySettings.adjustments.electricity 
     };
-    return { totalMonthOks: finalTotalMonthOks, monthlyChartData: aggregatedMonthData, totalCalls };
+
+    const adjustedAggregatedMonthData = {
+        ...aggregatedMonthData,
+        okMain: Math.max(0, aggregatedMonthData.okMain + monthlySettings.adjustments.main),
+        okElectricity: Math.max(0, aggregatedMonthData.okElectricity + monthlySettings.adjustments.electricity),
+    };
+
+    return { totalMonthOks: finalTotalMonthOks, monthlyChartData: adjustedAggregatedMonthData, totalCalls };
   }, [appData, currentDate, monthlySettings]);
   
   const dailyMainGoal = useMemo(() => {
@@ -190,47 +204,70 @@ const App: React.FC = () => {
 
   // Achievement check effect
   useEffect(() => {
+    if (isAuthenticating) return;
     const newAchievements = { ...achievements };
     let changed = false;
     const unlockAchievement = (id: AchievementId) => {
-        if (!newAchievements[id].unlocked) {
+        if (newAchievements[id] && !newAchievements[id].unlocked) {
             newAchievements[id] = { ...newAchievements[id], unlocked: true, unlockedDate: ymdLocal(new Date()) };
             changed = true;
         }
     };
     
-    // This calculation for totalCalls is incorrect because it's only using the current month's data.
-    // A more accurate total should be calculated across all data.
-    const allTimeTotalCalls = Object.values(appData)
-      .filter((v): v is { callsMade: number } => typeof v === 'object' && v !== null && 'callsMade' in v && typeof v.callsMade === 'number')
-      .reduce((acc, cur) => acc + cur.callsMade, 0);
+    // Cumulative calculations
+    const allTimeTotals = Object.keys(appData)
+      .filter(key => key.startsWith('ap_day_v3_'))
+      .reduce((acc, key) => {
+        const dayData = appData[key] as CounterState;
+        acc.calls += dayData.callsMade || 0;
+        acc.okMain += dayData.okMain || 0;
+        return acc;
+      }, { calls: 0, okMain: 0 });
 
+    // Daily achievements
     if (counts.okMain >= 1) unlockAchievement('FIRST_OK_MAIN');
     if (counts.okMain >= 10) unlockAchievement('TEN_OK_MAIN');
-    if (totalMonthOks.main >= monthlySettings.goals.main && monthlySettings.goals.main > 0) unlockAchievement('MONTHLY_GOAL_MAIN');
-    if (allTimeTotalCalls >= 100) unlockAchievement('TOTAL_CALLS_100');
-    if (allTimeTotalCalls >= 1000) unlockAchievement('TOTAL_CALLS_1000');
+    if (counts.okElectricity >= 1) unlockAchievement('FIRST_OK_ELEC');
+    if (counts.okElectricity >= 10) unlockAchievement('TEN_OK_ELEC');
     
+    // Monthly achievements
+    if (monthlySettings.goals.main > 0 && totalMonthOks.main >= monthlySettings.goals.main) unlockAchievement('MONTHLY_GOAL_MAIN');
+    if (monthlySettings.goals.electricity > 0 && totalMonthOks.electricity >= monthlySettings.goals.electricity) unlockAchievement('MONTHLY_GOAL_ELEC');
+    
+    // Cumulative achievements
+    if (allTimeTotals.calls >= 100) unlockAchievement('TOTAL_CALLS_100');
+    if (allTimeTotals.calls >= 1000) unlockAchievement('TOTAL_CALLS_1000');
+    if (allTimeTotals.okMain >= 100) unlockAchievement('TOTAL_OK_MAIN_100');
+    
+    // Streak & combined achievements
     let newStreak = dailyStreak;
-    const currentOks = counts.okMain; // Streak is based on main product only
-    if (dailyMainGoal > 0 && currentOks >= dailyMainGoal) {
-        const todayStr = ymdLocal(new Date());
+    const todayStr = ymdLocal(new Date());
+    const isMainGoalMet = dailyMainGoal > 0 && counts.okMain >= dailyMainGoal;
+    const isElecGoalMet = dailyElectricityGoal > 0 && counts.okElectricity >= dailyElectricityGoal;
+
+    if (isMainGoalMet) { // Streak is based on main product only
         if (dailyStreakData.date !== todayStr) {
            const yesterdayStr = ymdLocal(new Date(Date.now() - 86400000));
            newStreak = dailyStreakData.date === yesterdayStr ? dailyStreakData.count + 1 : 1;
         }
     }
+    
     if (newStreak >= 5) unlockAchievement('STREAK_5');
+    if (newStreak >= 10) unlockAchievement('STREAK_10');
+    if (isMainGoalMet && isElecGoalMet) unlockAchievement('PERFECT_DAY');
+
 
     if (changed || newStreak !== dailyStreak) {
-        setAppData(prev => ({
-            ...prev,
-            [getAchievementsStorageKey()]: newAchievements,
-            ...(newStreak !== dailyStreak && { [getStreakStorageKey()]: { count: newStreak, date: ymdLocal(new Date()) }})
-        }));
+        setAppData(prev => {
+            const updatedData = { ...prev, [getAchievementsStorageKey()]: newAchievements };
+            if (isMainGoalMet && dailyStreakData.date !== todayStr) {
+                updatedData[getStreakStorageKey()] = { count: newStreak, date: todayStr };
+            }
+            return updatedData;
+        });
     }
 
-  }, [counts, monthlySettings, totalMonthOks, dailyMainGoal, dailyStreak, appData, achievements, dailyStreakData]);
+  }, [counts, monthlySettings, totalMonthOks, dailyMainGoal, dailyElectricityGoal, dailyStreak, appData, achievements, dailyStreakData, isAuthenticating]);
 
   const previewText = useMemo(() => {
     const d = ymdLocal(currentDate);

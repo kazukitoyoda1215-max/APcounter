@@ -21,7 +21,14 @@ export type AchievementId =
   | 'MONTHLY_GOAL_MAIN'
   | 'TOTAL_CALLS_100'
   | 'TOTAL_CALLS_1000'
-  | 'STREAK_5';
+  | 'STREAK_5'
+  // New
+  | 'FIRST_OK_ELEC'
+  | 'TEN_OK_ELEC'
+  | 'MONTHLY_GOAL_ELEC'
+  | 'PERFECT_DAY'
+  | 'STREAK_10'
+  | 'TOTAL_OK_MAIN_100';
 
 export interface Achievement {
     id: AchievementId;

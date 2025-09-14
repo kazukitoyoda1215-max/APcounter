@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { View, Theme } from '../types';
 import Navigation from './Navigation';
 import ThemeSwitcher from './ThemeSwitcher';
+import { SettingsIcon } from './icons';
 
 interface TopBarProps {
   userName: string;
@@ -12,9 +13,10 @@ interface TopBarProps {
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
   onLogout: () => void;
+  onOpenSettings: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, theme, onThemeChange, onLogout }) => {
+const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, theme, onThemeChange, onLogout, onOpenSettings }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
@@ -25,6 +27,13 @@ const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, the
       
       <div className="flex items-center gap-4 ml-auto">
         <ThemeSwitcher theme={theme} onToggle={() => onThemeChange(theme === 'light' ? 'dark' : 'light')} />
+        <button
+            onClick={onOpenSettings}
+            className="btn-neumorphic p-2 rounded-full"
+            aria-label="Open settings"
+        >
+            <SettingsIcon className="w-5 h-5 text-color-light" />
+        </button>
         <div className="relative">
           <div onClick={() => setIsProfileOpen(p => !p)} className="text-right text-color-light text-sm cursor-pointer flex items-center gap-1">
               <span className="font-semibold text-gradient">{userName}</span> 

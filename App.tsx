@@ -1,12 +1,13 @@
 
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { CounterState, OneClickActionCategory, View, Theme, Achievement, AchievementId } from './types';
+import type { CounterState, OneClickActionCategory, View, Theme, Achievement, AchievementId, ShortcutConfig, ShortcutActionId } from './types';
 import TopBar from './components/TopBar';
 import DailyView from './views/DailyView';
 import MonthlyView from './views/MonthlyView';
 import AchievementsView from './views/AchievementsView';
 import LoginView from './views/LoginView';
+import SettingsModal from './components/SettingsModal';
 import { loginUser, registerUser, getUserData, setUserData } from './services/gasService';
 
 // --- Helper Functions & Initial Data ---
@@ -15,6 +16,7 @@ const getDailyStorageKey = (d: Date): string => `ap_day_v3_${ymdLocal(d)}`;
 const getMonthlyStorageKey = (d: Date): string => `ap_month_v1_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const getAchievementsStorageKey = (): string => 'ap_achievements_v1';
 const getStreakStorageKey = (): string => 'ap_streak_v1';
+const getShortcutsStorageKey = (): string => 'ap_shortcuts_v1';
 
 const initialCounterState: CounterState = { okMain: 0, okElectricity: 0, ng: 0, ps: 0, na: 0, ex: 0, callsMade: 0, callsReceived: 0 };
 const initialMonthlySettings = {
@@ -66,11 +68,18 @@ const App: React.FC = () => {
   const [lastSaveTime, setLastSaveTime] = useState<string>('');
   const saveTimeoutRef = useRef<number | null>(null);
 
+  // UI State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+
   // --- Derived State ---
   const counts = useMemo<CounterState>(() => appData[getDailyStorageKey(currentDate)] || initialCounterState, [appData, currentDate]);
   const monthlySettings = useMemo(() => appData[getMonthlyStorageKey(currentDate)] || initialMonthlySettings, [appData, currentDate]);
   const achievements = useMemo<Record<AchievementId, Achievement>>(() => ({ ...initialAchievements(), ...appData[getAchievementsStorageKey()] }), [appData]);
   const dailyStreakData = useMemo(() => appData[getStreakStorageKey()] || { count: 0, date: '' }, [appData]);
+  const shortcuts = useMemo<ShortcutConfig>(() => appData[getShortcutsStorageKey()] || {}, [appData]);
+
 
   const dailyStreak = useMemo(() => {
     const todayStr = ymdLocal(new Date());
@@ -145,6 +154,16 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+  
+  // Timer effect
+  useEffect(() => {
+    let interval: number | null = null;
+    if (isTimerRunning) {
+      interval = window.setInterval(() => setTimerSeconds(s => s + 1), 1000);
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [isTimerRunning]);
+
 
   const { totalMonthOks, monthlyChartData, totalCalls } = useMemo(() => {
     let totalMain = 0;
@@ -308,6 +327,12 @@ const App: React.FC = () => {
     });
   }, [updateDailyCount]);
 
+  const handleOneClickAndStopTimer = useCallback((category: OneClickActionCategory) => {
+    handleOneClickAction(category);
+    setIsTimerRunning(false);
+    setTimerSeconds(0);
+  }, [handleOneClickAction]);
+
   const handleMonthlySettingsChange = useCallback(<K extends keyof typeof initialMonthlySettings, T extends keyof (typeof initialMonthlySettings)[K]>(
     section: K, field: T, value: number
   ) => {
@@ -326,6 +351,13 @@ const App: React.FC = () => {
         };
     });
   }, [currentDate]);
+
+  const handleShortcutConfigChange = useCallback((newConfig: ShortcutConfig) => {
+    setAppData(p => ({
+        ...p,
+        [getShortcutsStorageKey()]: newConfig
+    }));
+  }, []);
 
   // --- Auth Handlers ---
   const handleLogin = async (name: string, pass: string) => {
@@ -364,14 +396,8 @@ const App: React.FC = () => {
   };
 
   const handleLogout = useCallback(async () => {
-    // Cancel any pending debounced save.
-    if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-    }
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-    // Attempt to save the final state before logging out.
-    // This is a "fire and forget" save; we don't block logout if it fails
-    // (e.g., user is offline), but we log the error.
     if (userName && token) {
         try {
             await setUserData(userName, token, appData);
@@ -379,17 +405,48 @@ const App: React.FC = () => {
             console.error("Failed to save data on logout:", error);
         }
     }
-
-    // Proceed with clearing local session and resetting app state.
     localStorage.removeItem('gas_user');
     localStorage.removeItem('gas_token');
-    
     setUserName(null);
     setToken(null);
     setAppData({});
     setAuthError('');
-    setView('daily'); // Reset to the default view for the next login
+    setView('daily');
   }, [userName, token, appData]);
+
+  // --- Shortcut Key Handler ---
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            const action = (Object.entries(shortcuts) as [ShortcutActionId, string][]).find(([, key]) => key === event.key)?.[0];
+
+            if (!action) return;
+
+            event.preventDefault();
+
+            if (action.endsWith('_inc')) {
+                const cat = action.replace('_inc', '') as keyof CounterState;
+                handleIncrement(cat);
+            } else if (action.endsWith('_dec')) {
+                const cat = action.replace('_dec', '') as keyof CounterState;
+                handleDecrement(cat);
+            } else if (action.startsWith('oneClick_')) {
+                const cat = action.replace('oneClick_', '') as OneClickActionCategory;
+                handleOneClickAndStopTimer(cat);
+            } else if (action === 'timer_start') {
+                setIsTimerRunning(true);
+            } else if (action === 'timer_stop') {
+                setIsTimerRunning(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [shortcuts, handleIncrement, handleDecrement, handleOneClickAndStopTimer]);
+
 
   // --- Render Logic ---
   if (isAuthenticating) {
@@ -416,11 +473,12 @@ const App: React.FC = () => {
         theme={theme}
         onThemeChange={setTheme}
         onLogout={handleLogout}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
       
       {view === 'daily' && (
         <DailyView 
-          onOneClickAction={handleOneClickAction}
+          onOneClickAction={handleOneClickAndStopTimer}
           counts={counts}
           dailyMainGoal={dailyMainGoal}
           dailyElectricityGoal={dailyElectricityGoal}
@@ -431,6 +489,10 @@ const App: React.FC = () => {
           onClear={handleClearDailyData}
           lastSaveTime={lastSaveTime}
           previewText={previewText}
+          timerSeconds={timerSeconds}
+          isTimerRunning={isTimerRunning}
+          onTimerStart={() => setIsTimerRunning(true)}
+          onTimerStop={() => setIsTimerRunning(false)}
         />
       )}
       {view === 'monthly' && (
@@ -446,6 +508,13 @@ const App: React.FC = () => {
       {view === 'achievements' && (
         <AchievementsView achievements={Object.values(achievements)} />
       )}
+      
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        config={shortcuts}
+        onConfigChange={handleShortcutConfigChange}
+      />
 
        <footer className="text-center text-sm text-color-light pt-6 border-t border-[var(--shadow-dark)] mt-6">
         <p>Sales Dashboard v7.0 - Gamification Edition</p>

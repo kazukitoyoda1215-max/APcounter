@@ -74,7 +74,7 @@ interface MonthlyDonutChartProps {
 const MonthlyDonutChart: React.FC<MonthlyDonutChartProps> = ({ chartData }) => {
     
     const formattedChartData = useMemo(() => {
-        const others = chartData.ps + chartData.na + chartData.ex;
+        const others = chartData.ps + chartData.na; // Removed .ex from this calculation
         return [
             { label: 'OK (主商材)', value: chartData.okMain, color: 'var(--color-primary)' },
             { label: 'OK (電気)', value: chartData.okElectricity, color: 'var(--color-secondary)' },

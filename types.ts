@@ -37,3 +37,17 @@ export interface Achievement {
     unlocked: boolean;
     unlockedDate: string | null;
 }
+
+export type ShortcutActionId =
+  | 'okMain_inc' | 'okMain_dec'
+  | 'okElectricity_inc' | 'okElectricity_dec'
+  | 'ng_inc' | 'ng_dec'
+  | 'ps_inc' | 'ps_dec'
+  | 'na_inc' | 'na_dec'
+  | 'ex_inc' | 'ex_dec'
+  | 'callsMade_inc' | 'callsMade_dec'
+  | 'callsReceived_inc' | 'callsReceived_dec'
+  | 'oneClick_ok' | 'oneClick_ng' | 'oneClick_ps' | 'oneClick_na'
+  | 'timer_start' | 'timer_stop';
+
+export type ShortcutConfig = Partial<Record<ShortcutActionId, string>>;

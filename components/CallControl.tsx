@@ -49,7 +49,7 @@ const CallControl: React.FC<CallControlProps> = ({ timerSeconds, isTimerRunning,
 
 
       {/* Quick Actions Section */}
-      <div className="flex-grow flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+      <div id="quick-actions-wrapper" className="flex-grow flex items-center gap-2 flex-wrap justify-center sm:justify-end">
          {actionButtons.map(({label, category}) => (
              <button key={category} onClick={() => onOneClickAction(category)} className="btn-action-topbar text-sm px-4 py-3 min-w-[90px]">
                 {label}

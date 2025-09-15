@@ -20,7 +20,7 @@ const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, the
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
-    <header className="flex justify-between items-center gap-4 flex-wrap">
+    <header className="main-header flex justify-between items-center gap-4 flex-wrap">
       <div className="flex-grow md:flex-grow-0">
         <Navigation activeView={activeView} onViewChange={onViewChange} />
       </div>

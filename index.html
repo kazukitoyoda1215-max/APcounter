@@ -296,6 +296,14 @@
         0%, 100% { transform: rotate(25deg); }
         50% { transform: rotate(-25deg); }
       }
+
+      /* Responsive adjustments for short windows */
+      @media (max-height: 680px) {
+        .hidable-container,
+        footer {
+          display: none;
+        }
+      }
     </style>
   <script type="importmap">
 {

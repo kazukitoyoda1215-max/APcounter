@@ -43,14 +43,16 @@ const DailyView: React.FC<DailyViewProps> = (props) => {
         onClear={props.onClear}
         lastSaveTime={props.lastSaveTime}
       />
-      <DailyGoalsDashboard 
-        dailyMainGoal={props.dailyMainGoal}
-        dailyElectricityGoal={props.dailyElectricityGoal}
-        currentMainOks={props.counts.okMain}
-        currentElectricityOks={props.counts.okElectricity}
-        dailyStreak={props.dailyStreak}
-      />
-      <ReportingConsole textToCopy={props.previewText} />
+      <div className="hidable-container space-y-6">
+        <DailyGoalsDashboard 
+          dailyMainGoal={props.dailyMainGoal}
+          dailyElectricityGoal={props.dailyElectricityGoal}
+          currentMainOks={props.counts.okMain}
+          currentElectricityOks={props.counts.okElectricity}
+          dailyStreak={props.dailyStreak}
+        />
+        <ReportingConsole textToCopy={props.previewText} />
+      </div>
     </main>
   );
 };

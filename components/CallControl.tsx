@@ -1,7 +1,9 @@
 
+
 import React from 'react';
 import { OneClickActionCategory } from '../types';
 import { PlayIcon, StopIcon } from './icons';
+import WalkingCat from './WalkingCat';
 
 interface CallControlProps {
   timerSeconds: number;
@@ -27,21 +29,27 @@ const actionButtons: { label: string; category: OneClickActionCategory }[] = [
 const CallControl: React.FC<CallControlProps> = ({ timerSeconds, isTimerRunning, onTimerStart, onTimerStop, onOneClickAction }) => {
   return (
     <section className="neumorphic-card p-4 flex items-center justify-between flex-wrap gap-4">
-      {/* Timer Section */}
-      <div className="flex-grow flex flex-col items-center">
-        <div className="text-5xl font-light text-color-dark tracking-widest">{formatTime(timerSeconds)}</div>
-        <div className="flex items-center gap-3 mt-2">
-            <button onClick={onTimerStart} disabled={isTimerRunning} className="btn-gradient p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start Timer">
-                <PlayIcon className="w-5 h-5 text-white" />
-            </button>
-            <button onClick={onTimerStop} disabled={!isTimerRunning} className="btn-neumorphic p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Stop Timer">
-                <StopIcon className="w-5 h-5" />
-            </button>
+      {/* Timer & Animation Container */}
+      <div className="flex items-center">
+        {/* Timer */}
+        <div className="flex flex-col items-center">
+          <div className="text-5xl font-light text-color-dark tracking-widest w-48 text-center tabular-nums">{formatTime(timerSeconds)}</div>
+          <div className="flex items-center gap-3 mt-2">
+              <button onClick={onTimerStart} disabled={isTimerRunning} className="btn-gradient p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start Timer">
+                  <PlayIcon className="w-5 h-5 text-white" />
+              </button>
+              <button onClick={onTimerStop} disabled={!isTimerRunning} className="btn-neumorphic p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Stop Timer">
+                  <StopIcon className="w-5 h-5" />
+              </button>
+          </div>
         </div>
+        {/* Cat Animation */}
+        <WalkingCat isRunning={isTimerRunning} />
       </div>
 
+
       {/* Quick Actions Section */}
-      <div className="flex-grow flex items-center gap-2 flex-wrap justify-center">
+      <div className="flex-grow flex items-center gap-2 flex-wrap justify-center sm:justify-end">
          {actionButtons.map(({label, category}) => (
              <button key={category} onClick={() => onOneClickAction(category)} className="btn-action-topbar text-sm px-4 py-3 min-w-[90px]">
                 {label}

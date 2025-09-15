@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import type { CounterState } from '../types';
 
@@ -71,7 +72,7 @@ const counterCategories: { key: keyof CounterState, label: string }[] = [
 
 const DailyCounters: React.FC<DailyCountersProps> = ({ counts, onIncrement, onDecrement, onCountChange, onClear, lastSaveTime }) => {
   return (
-    <section className="neumorphic-card p-4 sm:p-5 space-y-4">
+    <section id="daily-counters-section" className="neumorphic-card p-4 sm:p-5 space-y-4">
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-lg font-semibold text-color-dark">カウンター</h2>
         <span className="text-sm text-color-light h-5">{lastSaveTime}</span>

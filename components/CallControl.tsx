@@ -28,13 +28,13 @@ const actionButtons: { label: string; category: OneClickActionCategory }[] = [
 
 const CallControl: React.FC<CallControlProps> = ({ timerSeconds, isTimerRunning, onTimerStart, onTimerStop, onOneClickAction }) => {
   return (
-    <section className="neumorphic-card p-4 flex items-center justify-between flex-wrap gap-4">
+    <section id="call-control-section" className="neumorphic-card p-4 flex items-center justify-between flex-wrap gap-4">
       {/* Timer & Animation Container */}
       <div className="flex items-center">
         {/* Timer */}
         <div className="flex flex-col items-center">
           <div className="text-5xl font-light text-color-dark tracking-widest w-48 text-center tabular-nums">{formatTime(timerSeconds)}</div>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3 mt-2 timer-buttons">
               <button onClick={onTimerStart} disabled={isTimerRunning} className="btn-gradient p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Start Timer">
                   <PlayIcon className="w-5 h-5 text-white" />
               </button>

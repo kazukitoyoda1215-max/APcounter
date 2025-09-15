@@ -298,10 +298,88 @@
       }
 
       /* Responsive adjustments for short windows */
-      @media (max-height: 680px) {
+      @media (max-height: 600px) {
         .hidable-container,
         footer {
           display: none;
+        }
+      }
+      
+      /* Responsive adjustments for very short windows */
+      @media (max-height: 480px) {
+        /* Reduce overall padding and spacing */
+        .main-app-container {
+          padding: 0.5rem;
+        }
+        .main-app-container > *:not([hidden]) ~ *:not([hidden]) {
+          margin-top: 0.75rem; /* Overrides space-y-6 */
+        }
+        
+        /* Compact cards */
+        .neumorphic-card {
+          padding: 0.75rem;
+        }
+
+        /* Compact CallControl */
+        #call-control-section .text-5xl {
+          font-size: 2.25rem; /* text-4xl */
+          line-height: 2.5rem;
+          width: 8rem; /* 128px */
+        }
+        #call-control-section .cat-animation-wrapper {
+          width: 80px;
+          height: 50px;
+          margin-left: 0;
+        }
+        #call-control-section .cat-container {
+          transform: translateX(-50%) scale(0.25);
+          bottom: 4px;
+        }
+        #call-control-section .btn-action-topbar {
+          padding: 0.5rem 0.5rem;
+          min-width: 70px;
+          font-size: 0.8rem;
+        }
+        #call-control-section .timer-buttons {
+          margin-top: 0.25rem;
+          gap: 0.75rem;
+        }
+        #call-control-section .timer-buttons svg {
+          width: 1rem;
+          height: 1rem;
+        }
+
+        /* Compact DailyCounters */
+        #daily-counters-section .neumorphic-card-inner {
+          padding: 0.5rem;
+        }
+        #daily-counters-section h2 {
+          font-size: 1rem;
+          margin-bottom: 0.25rem;
+        }
+        #daily-counters-section .text-4xl {
+          font-size: 1.5rem; /* text-2xl */
+          line-height: 2rem;
+          margin-top: 0.25rem;
+          margin-bottom: 0.25rem;
+        }
+        #daily-counters-section .grid {
+          gap: 0.5rem;
+        }
+        #daily-counters-section .mt-1 {
+          margin-top: 0.25rem;
+        }
+        #daily-counters-section .btn-neumorphic,
+        #daily-counters-section .btn-gradient {
+          padding-top: 0.125rem;
+          padding-bottom: 0.125rem;
+          font-size: 0.8rem;
+        }
+        #daily-counters-section .justify-end {
+          padding-top: 0.25rem;
+        }
+        #daily-counters-section .text-color-danger {
+          font-size: 0.75rem;
         }
       }
     </style>

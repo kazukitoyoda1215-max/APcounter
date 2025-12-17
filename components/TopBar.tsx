@@ -1,10 +1,9 @@
 
-
 import React, { useState } from 'react';
 import { View, Theme } from '../types';
 import Navigation from './Navigation';
 import ThemeSwitcher from './ThemeSwitcher';
-import { SettingsIcon } from './icons';
+import { SettingsIcon, HelpIcon } from './icons';
 
 interface TopBarProps {
   userName: string;
@@ -14,9 +13,10 @@ interface TopBarProps {
   onThemeChange: (theme: Theme) => void;
   onLogout: () => void;
   onOpenSettings: () => void;
+  onOpenHelp: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, theme, onThemeChange, onLogout, onOpenSettings }) => {
+const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, theme, onThemeChange, onLogout, onOpenSettings, onOpenHelp }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
@@ -27,10 +27,21 @@ const TopBar: React.FC<TopBarProps> = ({ userName, activeView, onViewChange, the
       
       <div className="flex items-center gap-4 ml-auto">
         <ThemeSwitcher theme={theme} onToggle={() => onThemeChange(theme === 'light' ? 'dark' : 'light')} />
+        
+        <button
+            onClick={onOpenHelp}
+            className="btn-neumorphic p-2 rounded-full"
+            aria-label="How to use"
+            title="使い方ガイド"
+        >
+            <HelpIcon className="w-5 h-5 text-color-light" />
+        </button>
+
         <button
             onClick={onOpenSettings}
             className="btn-neumorphic p-2 rounded-full"
             aria-label="Open settings"
+            title="設定"
         >
             <SettingsIcon className="w-5 h-5 text-color-light" />
         </button>

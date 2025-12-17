@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { CounterState, OneClickActionCategory, View, Theme, Achievement, AchievementId, ShortcutConfig, ShortcutActionId } from './types';
 import TopBar from './components/TopBar';
@@ -8,6 +7,7 @@ import MonthlyView from './views/MonthlyView';
 import AchievementsView from './views/AchievementsView';
 import LoginView from './views/LoginView';
 import SettingsModal from './components/SettingsModal';
+import HelpModal from './components/HelpModal';
 import { loginUser, registerUser, getUserData, setUserData } from './services/gasService';
 
 // --- Helper Functions & Initial Data ---
@@ -70,6 +70,7 @@ const App: React.FC = () => {
 
   // UI State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
@@ -474,6 +475,7 @@ const App: React.FC = () => {
         onThemeChange={setTheme}
         onLogout={handleLogout}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenHelp={() => setIsHelpOpen(true)}
       />
       
       {view === 'daily' && (
@@ -514,6 +516,11 @@ const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         config={shortcuts}
         onConfigChange={handleShortcutConfigChange}
+      />
+      
+      <HelpModal
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
       />
 
        <footer className="text-center text-sm text-color-light pt-6 border-t border-[var(--shadow-dark)] mt-6">
